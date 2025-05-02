@@ -10,17 +10,17 @@ const registerUser = async (req, res, next) => {
     }
 
     try {
-        const { username, email, password } = req.body;
+        const { fullname, email, password } = req.body;
 
-        const existingUser = await userModel.findOne({ $or: [{ username }, { email }] });
+        const existingUser = await userModel.findOne({ $or: [{ fullname }, { email }] });
         if (existingUser) {
-            return res.status(409).json({ message: 'Username or Email already exists' });
+            return res.status(409).json({ message: 'Fullname or Email already exists' });
         }
 
         const hashedPassword = await userModel.hashPassword(password);
 
         const user = await userService.createUser({
-            username,
+            fullname,
             email,
             password: hashedPassword
         });
@@ -31,7 +31,7 @@ const registerUser = async (req, res, next) => {
             token,
             user: {
                 _id: user._id,
-                username: user.username,
+                fullname: user.username,
                 email: user.email
             }
         });
@@ -65,11 +65,7 @@ const loginUser = async (req, res, next) => {
 
         const { password: _, ...userData } = user.toObject();
 
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: 24 * 60 * 60 * 1000
-        });
+        res.cookie('token', token);
 
         res.status(200).json({ token, user: userData });
 

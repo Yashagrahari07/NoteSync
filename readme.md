@@ -1,0 +1,1 @@
+# NoteSync: Real-time Collaborative Notes App

@@ -4,10 +4,12 @@ import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
 import SignUp from './pages/SignUp/SignUp';
 import CreateNote from './pages/CreateNote/CreateNote';
+import LandingPage from './pages/LandingPage/LandingPage';
 
 const routes = (
   <Router>
     <Routes>
+      <Route path="/" element={<LandingPage />} />
       <Route path="/dashboard" exact element={<Home />} />
       <Route path="/login" exact element={<Login />} />
       <Route path="/signup" exact element={<SignUp />} />

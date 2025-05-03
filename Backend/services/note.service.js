@@ -1,7 +1,28 @@
+const axios = require('axios');
 const Note = require("../models/note.model");
 
 exports.createNote = async (data, userId) => {
-  return await Note.create({ ...data, userId });
+  try {
+    // Fetch a random quote
+    const response = await axios.get('https://zenquotes.io/api/random');
+    const quote = response.data[0];
+
+    return await Note.create({
+      ...data,
+      userId,
+      quote: {
+        text: quote.q,
+        author: quote.a
+      }
+    });
+  } catch (err) {
+    console.error("Failed to fetch quote:", err.message);
+
+    return await Note.create({
+      ...data,
+      userId
+    });
+  }
 };
 
 exports.getAllNotes = async (userId) => {

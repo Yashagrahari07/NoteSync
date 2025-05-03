@@ -32,7 +32,8 @@ const noteSchema = new Schema({
     }
   ],
   quote: {
-    text: { type: String }
+    text: { type: String, default: '' },
+    author: { type: String, default: '' }
   },
   createdOn: {
     type: Date,

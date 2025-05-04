@@ -48,10 +48,23 @@ const deleteNote = async (req, res) => {
   }
 };
 
+const addCollaborator = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const { id: noteId } = req.params;
+
+    const updatedNote = await NoteService.addCollaborator(noteId, email, req.user._id);
+    res.status(200).json(updatedNote);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
     createNote,
     getAllNotes,
     getNoteById,
     updateNote,
-    deleteNote
+    deleteNote,
+    addCollaborator
 };

@@ -26,10 +26,31 @@ const noteSchema = new Schema({
     ref: "user",
     required: true
   },
+  owner: {
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: true
+    },
+    fullname: {
+      type: String,
+      required: true
+    }
+  },
   collaborators: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "user"
+      userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user"
+      },
+      email: {
+        type: String,
+        required: true
+      },
+      fullname: {
+        type: String,
+        required: true
+      }
     }
   ],
   quote: {

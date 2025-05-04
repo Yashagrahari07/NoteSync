@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
-const { userModel } = require('./models/user.model');
 const NoteService = require('./services/note.service');
+const UserModel = require('./models/user.model');
+
+const activeUsers = {};
 
 module.exports.setupSocket = (server) => {
   const io = require('socket.io')(server, {
@@ -10,66 +12,60 @@ module.exports.setupSocket = (server) => {
     },
   });
 
-  io.use(async (socket, next) => {
-    try {
-      const token = socket.handshake.auth.token;
-      if (!token) {
-        return next(new Error("Unauthorized"));
-      }
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await userModel.findById(decoded._id);
-      if (!user) {
-        return next(new Error("Unauthorized"));
-      }
-
-      socket.user = user;
-      next();
-    } catch (err) {
-      next(new Error("Unauthorized"));
-    }
-  });
-
   io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.user.username}`);
+    const token = socket.handshake.auth?.token;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.userId = decoded._id || decoded.id;
+      } catch (err) {
+        socket.emit('error', { message: 'Authentication failed' });
+        socket.disconnect();
+        return;
+      }
+    } else {
+      socket.emit('error', { message: 'Authentication required' });
+      socket.disconnect();
+      return;
+    }
 
     socket.on('joinNote', async (noteId) => {
       try {
-        const note = await NoteService.getNoteById(noteId, socket.user._id);
-        if (!note) {
-          socket.emit('error', { message: 'Note not found or unauthorized' });
-          return;
-        }
-
         socket.join(noteId);
-        console.log(`${socket.user.username} joined note ${noteId}`);
 
-        if (!note.collaborators.includes(socket.user._id)) {
-          note.collaborators.push(socket.user._id);
-          await note.save();
+        const user = await UserModel.findById(socket.userId);
+        if (!user) return;
+
+        if (!activeUsers[noteId]) {
+          activeUsers[noteId] = [];
         }
+        activeUsers[noteId].push({ fullname: user.fullname, socketId: socket.id });
 
-        socket.to(noteId).emit('userJoined', socket.user.username);
+        io.to(noteId).emit('activeUsers', activeUsers[noteId]);
 
+        const note = await NoteService.getNoteById(noteId, socket.userId);
+        if (note) {
+          socket.emit('noteData', note);
+        }
       } catch (err) {
         socket.emit('error', { message: 'Error joining note room' });
       }
     });
 
-    socket.on('editNote', async (noteId, content) => {
+    socket.on('editNote', async (noteId, updatedFields) => {
       try {
-        const note = await NoteService.getNoteById(noteId, socket.user._id);
+        const note = await NoteService.getNoteById(noteId, socket.userId);
         if (!note) {
-          socket.emit('error', { message: 'Note not found or unauthorized' });
+          socket.emit('error', { message: 'Note not found' });
           return;
         }
 
-        note.content = content;
+        Object.assign(note, updatedFields);
         note.updatedOn = Date.now();
         await note.save();
 
         io.to(noteId).emit('noteUpdated', note);
-
       } catch (err) {
         socket.emit('error', { message: 'Error updating the note' });
       }
@@ -77,13 +73,24 @@ module.exports.setupSocket = (server) => {
 
     socket.on('leaveNote', (noteId) => {
       socket.leave(noteId);
-      console.log(`${socket.user.username} left note ${noteId}`);
 
-      socket.to(noteId).emit('userLeft', socket.user.username);
+      if (activeUsers[noteId]) {
+        activeUsers[noteId] = activeUsers[noteId].filter(
+          (user) => user.socketId !== socket.id
+        );
+
+        io.to(noteId).emit('activeUsers', activeUsers[noteId]);
+      }
     });
 
     socket.on('disconnect', () => {
-      console.log(`${socket.user.username} disconnected`);
+      for (const noteId in activeUsers) {
+        activeUsers[noteId] = activeUsers[noteId].filter(
+          (user) => user.socketId !== socket.id
+        );
+
+        io.to(noteId).emit('activeUsers', activeUsers[noteId]);
+      }
     });
   });
 };

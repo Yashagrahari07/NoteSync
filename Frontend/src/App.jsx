@@ -3,8 +3,9 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Home from './pages/Home/Home';
 import Login from './pages/Login/Login';
 import SignUp from './pages/SignUp/SignUp';
-import CreateNote from './pages/CreateNote/CreateNote';
 import LandingPage from './pages/LandingPage/LandingPage';
+import JoinNote from './pages/JoinNote/JoinNote';
+import EditNote from './pages/EditNote/EditNote';
 
 const routes = (
   <Router>
@@ -13,7 +14,8 @@ const routes = (
       <Route path="/dashboard" exact element={<Home />} />
       <Route path="/login" exact element={<Login />} />
       <Route path="/signup" exact element={<SignUp />} />
-      <Route path="/create-note/:id" element={<CreateNote />} />
+      <Route path="/edit-note/:noteId" element={<EditNote />} />
+      <Route path="/join-note" element={<JoinNote />} />
     </Routes>
   </Router>
 );

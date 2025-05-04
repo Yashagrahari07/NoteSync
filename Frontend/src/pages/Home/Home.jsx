@@ -3,8 +3,7 @@ import Navbar from '../../components/Navbar';
 import NoteCard from '../../components/Cards/NoteCard';
 import { MdAdd } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
-import { getAllNotes } from '../../services/noteService';
-import { createNote } from '../../services/noteService';
+import { getAllNotes, createNote, deleteNote } from '../../services/noteService';
 
 const Home = () => {
   const [notes, setNotes] = useState([]);
@@ -29,9 +28,18 @@ const Home = () => {
   const handleAddNoteClick = async () => {
     try {
       const newNote = await createNote();
-      navigate(`/create-note/${newNote._id}`);
+      navigate(`/edit-note/${newNote._id}`);
     } catch (err) {
       console.error('Failed to create note:', err.message);
+    }
+  };
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      await deleteNote(noteId);
+      setNotes((prevNotes) => prevNotes.filter((note) => note._id !== noteId));
+    } catch (err) {
+      console.error('Failed to delete note:', err.message);
     }
   };
 
@@ -53,8 +61,8 @@ const Home = () => {
                 date={new Date(note.updatedOn).toLocaleDateString()}
                 content={note.content}
                 tags={note.tags.join(', ')}
-                onEdit={() => {}}
-                onDelete={() => {}}
+                onEdit={() => navigate(`/edit-note/${note._id}`)}
+                onDelete={() => handleDeleteNote(note._id)}
                 onPinNote={() => {}}
               />
             ))}

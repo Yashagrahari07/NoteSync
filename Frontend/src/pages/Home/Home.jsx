@@ -7,6 +7,7 @@ import { getAllNotes, createNote, deleteNote, togglePinNote } from '../../servic
 
 const Home = () => {
   const [notes, setNotes] = useState([]);
+  const [filteredNotes, setFilteredNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -15,6 +16,7 @@ const Home = () => {
       try {
         const data = await getAllNotes();
         setNotes(data);
+        setFilteredNotes(data);
       } catch (err) {
         console.error('Failed to fetch notes:', err.message);
       } finally {
@@ -38,6 +40,7 @@ const Home = () => {
     try {
       await deleteNote(noteId);
       setNotes((prevNotes) => prevNotes.filter((note) => note._id !== noteId));
+      setFilteredNotes((prevNotes) => prevNotes.filter((note) => note._id !== noteId));
     } catch (err) {
       console.error('Failed to delete note:', err.message);
     }
@@ -52,23 +55,45 @@ const Home = () => {
           note._id === updatedNote._id ? updatedNote : note
         )
       );
+
+      setFilteredNotes((prevNotes) =>
+        prevNotes.map((note) =>
+          note._id === updatedNote._id ? updatedNote : note
+        )
+      );
     } catch (err) {
       console.error("Failed to pin/unpin note:", err.message);
     }
   };
 
+  const handleSearch = (query) => {
+    if (!query) {
+      setFilteredNotes(notes);
+    } else {
+      const lowerCaseQuery = query.toLowerCase();
+      setFilteredNotes(
+        notes.filter(
+          (note) =>
+            note.title.toLowerCase().includes(lowerCaseQuery) ||
+            note.content.toLowerCase().includes(lowerCaseQuery) ||
+            note.tags.some((tag) => tag.toLowerCase().includes(lowerCaseQuery))
+        )
+      );
+    }
+  };
+
   return (
     <>
-      <Navbar />
+      <Navbar onSearch={handleSearch} />
 
       <div className='container mx-auto mt-8 px-4'>
         {loading ? (
           <p>Loading notes...</p>
-        ) : notes.length === 0 ? (
-          <p className='text-center text-gray-500'>No notes created yet.</p>
+        ) : filteredNotes.length === 0 ? (
+          <p className='text-center text-gray-500'>No notes found.</p>
         ) : (
           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {notes.map((note) => (
+            {filteredNotes.map((note) => (
               <NoteCard
                 key={note._id}
                 title={note.title}

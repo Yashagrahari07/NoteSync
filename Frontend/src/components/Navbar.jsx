@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import SearchBar from './SearchBar/SearchBar';
 import { logout } from '../services/authService';
 
-const Navbar = () => {
+const Navbar = ({ onSearch }) => {
   const [searchQuery, setSearchQuery] = useState("");
 
   const navigate = useNavigate();
@@ -18,10 +18,17 @@ const Navbar = () => {
     }
   };
 
-  const handleSearch = () => {};
+  const handleSearch = () => {
+    if (onSearch) {
+      onSearch(searchQuery);
+    }
+  };
 
   const onClearSearch = () => {
     setSearchQuery("");
+    if (onSearch) {
+      onSearch("");
+    }
   };
 
   const token = document.cookie

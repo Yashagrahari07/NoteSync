@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - ./Backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongo
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ./Frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  mongo:
+    image: mongo:6.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:

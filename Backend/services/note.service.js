@@ -98,3 +98,17 @@ exports.addCollaborator = async (noteId, email, userId) => {
     })),
   };
 };
+
+exports.togglePinNote = async (noteId, userId) => {
+  const note = await Note.findOne({
+    _id: noteId,
+    $or: [{ userId }, { "collaborators.userId": userId }],
+  });
+
+  if (!note) return null;
+
+  note.isPinned = !note.isPinned;
+  await note.save();
+
+  return note;
+};

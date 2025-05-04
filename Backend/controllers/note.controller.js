@@ -60,11 +60,27 @@ const addCollaborator = async (req, res) => {
   }
 };
 
+const togglePinNote = async (req, res) => {
+  try {
+    const { id: noteId } = req.params;
+    const note = await NoteService.togglePinNote(noteId, req.user._id);
+
+    if (!note) {
+      return res.status(404).json({ message: "Note not found or unauthorized" });
+    }
+
+    res.status(200).json(note);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 module.exports = {
-    createNote,
-    getAllNotes,
-    getNoteById,
-    updateNote,
-    deleteNote,
-    addCollaborator
+  createNote,
+  getAllNotes,
+  getNoteById,
+  updateNote,
+  deleteNote,
+  addCollaborator,
+  togglePinNote,
 };

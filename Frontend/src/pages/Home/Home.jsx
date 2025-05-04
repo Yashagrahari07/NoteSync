@@ -3,7 +3,7 @@ import Navbar from '../../components/Navbar';
 import NoteCard from '../../components/Cards/NoteCard';
 import { MdAdd } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
-import { getAllNotes, createNote, deleteNote } from '../../services/noteService';
+import { getAllNotes, createNote, deleteNote, togglePinNote } from '../../services/noteService';
 
 const Home = () => {
   const [notes, setNotes] = useState([]);
@@ -43,6 +43,20 @@ const Home = () => {
     }
   };
 
+  const handlePinNote = async (noteId) => {
+    try {
+      const updatedNote = await togglePinNote(noteId);
+
+      setNotes((prevNotes) =>
+        prevNotes.map((note) =>
+          note._id === updatedNote._id ? updatedNote : note
+        )
+      );
+    } catch (err) {
+      console.error("Failed to pin/unpin note:", err.message);
+    }
+  };
+
   return (
     <>
       <Navbar />
@@ -61,9 +75,10 @@ const Home = () => {
                 date={new Date(note.updatedOn).toLocaleDateString()}
                 content={note.content}
                 tags={note.tags.join(', ')}
+                isPinned={note.isPinned}
                 onEdit={() => navigate(`/edit-note/${note._id}`)}
                 onDelete={() => handleDeleteNote(note._id)}
-                onPinNote={() => {}}
+                onPinNote={() => handlePinNote(note._id)}
               />
             ))}
           </div>

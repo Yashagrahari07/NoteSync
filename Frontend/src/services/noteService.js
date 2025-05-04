@@ -57,3 +57,18 @@ export const addCollaborator = async (noteId, email) => {
   });
   return response.data;
 };
+
+export const togglePinNote = async (noteId) => {
+  const token = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("authToken="))
+    ?.split("=")[1];
+
+  const response = await axios.patch(`${API_URL}/${noteId}/pin`, {}, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  return response.data;
+};

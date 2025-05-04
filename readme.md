@@ -63,6 +63,20 @@ The application is divided into two main components:
 
 ---
 
+## Sample Users
+
+To try the application, you can use the following sample users:
+
+1. **User 1**:
+   - Email: `raj@gmail.com`
+   - Password: `raj1234`
+
+2. **User 2**:
+   - Email: `yash@gmail.com`
+   - Password: `yash1234`
+
+---
+
 ## API Endpoints
 
 ### **User Management**

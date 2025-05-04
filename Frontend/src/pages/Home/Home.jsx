@@ -4,6 +4,7 @@ import NoteCard from '../../components/Cards/NoteCard';
 import { MdAdd } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { getAllNotes } from '../../services/noteService';
+import { createNote } from '../../services/noteService';
 
 const Home = () => {
   const [notes, setNotes] = useState([]);
@@ -14,19 +15,24 @@ const Home = () => {
     const fetchNotes = async () => {
       try {
         const data = await getAllNotes();
-        setNotes(data); // Set the fetched notes
+        setNotes(data);
       } catch (err) {
         console.error('Failed to fetch notes:', err.message);
       } finally {
-        setLoading(false); // Stop loading after fetching
+        setLoading(false);
       }
     };
 
     fetchNotes();
   }, []);
 
-  const handleAddNoteClick = () => {
-    navigate('/create-note');
+  const handleAddNoteClick = async () => {
+    try {
+      const newNote = await createNote();
+      navigate(`/create-note/${newNote._id}`);
+    } catch (err) {
+      console.error('Failed to create note:', err.message);
+    }
   };
 
   return (

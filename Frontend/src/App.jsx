@@ -13,7 +13,7 @@ const routes = (
       <Route path="/dashboard" exact element={<Home />} />
       <Route path="/login" exact element={<Login />} />
       <Route path="/signup" exact element={<SignUp />} />
-      <Route path="/create-note" element={<CreateNote />} />
+      <Route path="/create-note/:id" element={<CreateNote />} />
     </Routes>
   </Router>
 );

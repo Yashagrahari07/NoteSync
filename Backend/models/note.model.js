@@ -6,11 +6,12 @@ const noteSchema = new Schema({
   title: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    default: "Untitled Note",
   },
   content: {
     type: String,
-    required: true
+    default: ""
   },
   tags: {
     type: [String],

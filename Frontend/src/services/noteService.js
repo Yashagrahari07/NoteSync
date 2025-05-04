@@ -13,3 +13,14 @@ export const getAllNotes = async () => {
   });
   return response.data;
 };
+
+export const createNote = async () => {
+  const token = Cookies.get('authToken');
+  const response = await axios.post(API_URL, {}, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    withCredentials: true,
+  });
+  return response.data;
+};

@@ -53,7 +53,7 @@ export default function EditNote() {
 
     if (!token) return;
 
-    socketRef.current = io("http://localhost:3000", {
+    socketRef.current = io(import.meta.env.VITE_API_BASE_URL, {
       auth: { token },
     });
 

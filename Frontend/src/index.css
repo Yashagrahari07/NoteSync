@@ -46,4 +46,61 @@
     .gradient-button {
         @apply bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg transform hover:scale-105 transition-all duration-200;
     }
+
+    /* Dashboard specific styles */
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Notification styles */
+    .notification-badge {
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.5;
+        }
+    }
+
+    /* Navbar and search styles */
+    .search-focus {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 3px rgba(43, 133, 255, 0.1);
+    }
+
+    .profile-dropdown-enter {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    .profile-dropdown-enter-active {
+        opacity: 1;
+        transform: translateY(0);
+        transition: opacity 200ms, transform 200ms;
+    }
+
+    .profile-dropdown-exit {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .profile-dropdown-exit-active {
+        opacity: 0;
+        transform: translateY(-10px);
+        transition: opacity 200ms, transform 200ms;
+    }
 }

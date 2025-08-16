@@ -29,4 +29,21 @@
     .icon-btn {
         @apply text-xl text-slate-300 cursor-pointer hover:text-primary;
     }
+
+    /* Landing page specific styles */
+    .gradient-text {
+        @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
+    }
+
+    .glass-effect {
+        @apply bg-white/80 backdrop-blur-md border border-gray-200/50;
+    }
+
+    .hover-lift {
+        @apply hover:shadow-xl transform hover:scale-105 transition-all duration-200;
+    }
+
+    .gradient-button {
+        @apply bg-gradient-to-r from-primary to-secondary text-white hover:shadow-lg transform hover:scale-105 transition-all duration-200;
+    }
 }

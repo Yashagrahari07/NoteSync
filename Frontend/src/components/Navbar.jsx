@@ -31,14 +31,38 @@ const Navbar = ({ onSearch }) => {
     }
   };
 
+  const handleLogoClick = () => {
+    const token = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('authToken='))
+      ?.split('=')[1];
+    
+    if (token) {
+      navigate('/dashboard');
+    } else {
+      navigate('/');
+    }
+  };
+
   const token = document.cookie
     .split('; ')
     .find((row) => row.startsWith('authToken='))
     ?.split('=')[1];
 
   return (
-    <div className='bg-white flex items-center justify-between px-6 py-2 drop-shadow-2xl'>
-      <h2 className='text-xl font-medium text-block py-2'>NoteSync</h2>
+    <div className='bg-white/90 backdrop-blur-md flex items-center justify-between px-6 py-3 drop-shadow-lg border-b border-gray-200/50'>
+      {/* Logo */}
+      <button 
+        onClick={handleLogoClick}
+        className="flex items-center space-x-2 hover:scale-105 transition-transform duration-200"
+      >
+        <div className="w-8 h-8 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center">
+          <span className="text-white font-bold text-sm">N</span>
+        </div>
+        <h2 className='text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent'>
+          NoteSync
+        </h2>
+      </button>
 
       <SearchBar 
         value={searchQuery} 
@@ -53,7 +77,7 @@ const Navbar = ({ onSearch }) => {
         {token && (
           <button
             onClick={() => navigate("/join-note")}
-            className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-700"
+            className="px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-medium"
           >
             Join Note
           </button>
@@ -64,7 +88,7 @@ const Navbar = ({ onSearch }) => {
         ) : (
           <button
             onClick={() => navigate("/login")}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-700"
+            className="px-4 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:shadow-lg transform hover:scale-105 transition-all duration-200 font-medium"
           >
             Login
           </button>

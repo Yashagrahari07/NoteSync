@@ -7,6 +7,7 @@ import LandingPage from './pages/LandingPage/LandingPage';
 import JoinNote from './pages/JoinNote/JoinNote';
 import EditNote from './pages/EditNote/EditNote';
 import PrivateRoute from './components/PrivateRoute';
+import { ToastProvider } from './components/Toast';
 
 const NotFoundPage = () => (
   <div style={{ textAlign: 'center', marginTop: '50px' }}>
@@ -38,42 +39,44 @@ const App = () => {
     ?.split('=')[1];
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
-        <Route path="/signup" element={token ? <Navigate to="/dashboard" /> : <SignUp />} />
+    <ToastProvider>
+      <Router>
+        <Routes>
+          <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
+          <Route path="/signup" element={token ? <Navigate to="/dashboard" /> : <SignUp />} />
 
-        <Route path="/" element={token ? <Navigate to="/dashboard" /> : <LandingPage />} />
+          <Route path="/" element={token ? <Navigate to="/dashboard" /> : <LandingPage />} />
 
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Home />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/edit-note/:noteId"
-          element={
-            <PrivateRoute>
-              <EditNote />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/join-note"
-          element={
-            <PrivateRoute>
-              <JoinNote />
-            </PrivateRoute>
-          }
-        />
+          <Route
+            path="/dashboard"
+            element={
+              <PrivateRoute>
+                <Home />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/edit-note/:noteId"
+            element={
+              <PrivateRoute>
+                <EditNote />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/join-note"
+            element={
+              <PrivateRoute>
+                <JoinNote />
+              </PrivateRoute>
+            }
+          />
 
-        <Route path="/404" element={<NotFoundPage />} />
-        <Route path="*" element={<Navigate to="/404" />} />
-      </Routes>
-    </Router>
+          <Route path="/404" element={<NotFoundPage />} />
+          <Route path="*" element={<Navigate to="/404" />} />
+        </Routes>
+      </Router>
+    </ToastProvider>
   );
 };
 

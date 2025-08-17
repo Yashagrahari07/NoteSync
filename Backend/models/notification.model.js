@@ -10,7 +10,7 @@ const notificationSchema = new Schema({
   },
   type: {
     type: String,
-    enum: ['userJoined', 'userLeft', 'collaboratorAdded', 'collaboratorRemoved', 'liveEdit'],
+    enum: ['collaboratorAdded', 'collaboratorRemoved', 'liveEdit'],
     required: true
   },
   title: {

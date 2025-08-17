@@ -53,23 +53,10 @@ module.exports.setupSocket = (server) => {
           activeUsers: activeUsers[noteId]
         });
 
-        // Get all users who should receive notifications (note owner and collaborators)
+        // Get note data for the user
         const note = await NoteService.getNoteById(noteId, socket.userId);
         if (note) {
           socket.emit('noteData', note);
-          
-          // Create notification for other users in the note
-          const targetUserIds = [note.userId, ...note.collaborators.map(c => c.userId)]
-            .filter(id => id.toString() !== socket.userId.toString());
-          
-          if (targetUserIds.length > 0) {
-            await NotificationService.createUserActivityNotification(
-              'userJoined',
-              noteId,
-              socket.userId,
-              targetUserIds
-            );
-          }
         }
       } catch (err) {
         socket.emit('error', { message: 'Error joining note room' });
@@ -163,26 +150,6 @@ module.exports.setupSocket = (server) => {
             user: { fullname: leavingUser.fullname, userId: leavingUser.userId },
             activeUsers: activeUsers[noteId]
           });
-
-          // Create notification for other users in the note
-          try {
-            const note = await NoteService.getNoteById(noteId, leavingUser.userId);
-            if (note) {
-              const targetUserIds = [note.userId, ...note.collaborators.map(c => c.userId)]
-                .filter(id => id.toString() !== leavingUser.userId.toString());
-              
-              if (targetUserIds.length > 0) {
-                await NotificationService.createUserActivityNotification(
-                  'userLeft',
-                  noteId,
-                  leavingUser.userId,
-                  targetUserIds
-                );
-              }
-            }
-          } catch (err) {
-            console.error('Error creating leave notification:', err);
-          }
         }
       }
     });
@@ -203,26 +170,6 @@ module.exports.setupSocket = (server) => {
             user: { fullname: disconnectedUser.fullname, userId: disconnectedUser.userId },
             activeUsers: activeUsers[noteId]
           });
-
-          // Create notification for other users in the note
-          try {
-            const note = await NoteService.getNoteById(noteId, disconnectedUser.userId);
-            if (note) {
-              const targetUserIds = [note.userId, ...note.collaborators.map(c => c.userId)]
-                .filter(id => id.toString() !== disconnectedUser.userId.toString());
-              
-              if (targetUserIds.length > 0) {
-                await NotificationService.createUserActivityNotification(
-                  'userLeft',
-                  noteId,
-                  disconnectedUser.userId,
-                  targetUserIds
-                );
-              }
-            }
-          } catch (err) {
-            console.error('Error creating disconnect notification:', err);
-          }
         }
       }
     });

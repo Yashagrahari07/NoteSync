@@ -6,6 +6,7 @@ import { Textarea } from "../../components/TeaxtArea/Textarea";
 import { Tag, Pin, Eye, EyeOff, ArrowLeft, Users, Copy, LogOut } from "lucide-react";
 import { io } from "socket.io-client";
 import { getNoteById, addCollaborator } from "../../services/noteService";
+import { useToastContext } from "../../components/Toast";
 
 export default function EditNote() {
   const [title, setTitle] = useState("");
@@ -21,10 +22,13 @@ export default function EditNote() {
   const [collaboratorEmail, setCollaboratorEmail] = useState("");
   const [activeUsers, setActiveUsers] = useState([]);
   const [isLivePreview, setIsLivePreview] = useState(false);
+  const [currentEditor, setCurrentEditor] = useState(null);
+  const [liveEditStatus, setLiveEditStatus] = useState("");
 
   const navigate = useNavigate();
   const { noteId } = useParams();
   const socketRef = useRef(null);
+  const { showInfo, showSuccess } = useToastContext();
 
   const fetchNoteData = async () => {
     try {
@@ -80,8 +84,48 @@ export default function EditNote() {
       setUpdatedOn(new Date(updatedNote.updatedOn).toISOString().slice(0, 10));
     });
 
-    socketRef.current.on("activeUsers", (users) => {
-      setActiveUsers(users.map((user) => user.fullname));
+    // Enhanced real-time events
+    socketRef.current.on("userJoined", (data) => {
+      setActiveUsers(data.activeUsers.map((user) => user.fullname));
+      if (data.user.userId !== socketRef.current.userId) {
+        showInfo(`${data.user.fullname} joined the note`);
+      }
+    });
+
+    socketRef.current.on("userLeft", (data) => {
+      setActiveUsers(data.activeUsers.map((user) => user.fullname));
+      if (data.user.userId !== socketRef.current.userId) {
+        showInfo(`${data.user.fullname} left the note`);
+      }
+    });
+
+    socketRef.current.on("liveEdit", (data) => {
+      if (data.editor.userId !== socketRef.current.userId) {
+        setCurrentEditor(data.editor.fullname);
+        setLiveEditStatus(`${data.editor.fullname} is editing...`);
+        
+        // Update note content from other user's edits
+        setTitle(data.note.title);
+        setContent(data.note.content);
+        setTags(data.note.tags.join(", "));
+        setUpdatedOn(new Date(data.note.updatedOn).toISOString().slice(0, 10));
+        
+        // Clear the status after 3 seconds
+        setTimeout(() => {
+          setCurrentEditor(null);
+          setLiveEditStatus("");
+        }, 3000);
+      }
+    });
+
+    socketRef.current.on("collaboratorAdded", (data) => {
+      setCollaborators(data.note.collaborators);
+      // No toast - only persistent notification will be shown
+    });
+
+    socketRef.current.on("collaboratorRemoved", (data) => {
+      setCollaborators(data.note.collaborators);
+      // No toast - only persistent notification will be shown
     });
 
     return () => {
@@ -205,8 +249,15 @@ export default function EditNote() {
                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                         Live Preview
                       </h3>
-                      <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
-                        Active
+                      <div className="flex items-center gap-2">
+                        {currentEditor && (
+                          <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
+                            {currentEditor} editing...
+                          </div>
+                        )}
+                        <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                          Active
+                        </div>
                       </div>
                     </div>
                     
@@ -241,6 +292,42 @@ export default function EditNote() {
                           "{quote.text}"
                         </blockquote>
                         <cite className="text-xs text-gray-500 font-medium">— {quote.author}</cite>
+                      </div>
+
+                      {/* Real-time Collaboration Status */}
+                      <div className="mt-6 p-4 bg-gradient-to-br from-emerald-50/80 to-green-50/80 rounded-xl border border-emerald-200/50 backdrop-blur-sm">
+                        <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                          Live Collaboration
+                        </h4>
+                        
+                        {liveEditStatus && (
+                          <div className="mb-3 p-2 bg-purple-100/80 rounded-lg border border-purple-200/50">
+                            <p className="text-xs text-purple-700 font-medium animate-pulse">
+                              {liveEditStatus}
+                            </p>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                          <span className="text-xs text-gray-600 font-medium">
+                            {activeUsers.length} active user{activeUsers.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        
+                        {activeUsers.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {activeUsers.map((user, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium"
+                              >
+                                {user}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -344,6 +431,11 @@ export default function EditNote() {
                       <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Note Content</span>
                     </div>
                     <div className="flex items-center gap-3">
+                      {currentEditor && (
+                        <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
+                          {currentEditor} editing
+                        </div>
+                      )}
                       <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
                         {content.length} characters
                       </div>
@@ -379,8 +471,19 @@ export default function EditNote() {
                           <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                           <span>Auto-save active</span>
                         </div>
+                        {activeUsers.length > 0 && (
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                            <span>{activeUsers.length} active user{activeUsers.length !== 1 ? 's' : ''}</span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
+                        {liveEditStatus && (
+                          <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
+                            {liveEditStatus}
+                          </div>
+                        )}
                         <div className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
                           {new Date().toLocaleTimeString()}
                         </div>

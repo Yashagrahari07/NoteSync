@@ -113,14 +113,6 @@ exports.createUserActivityNotification = async (type, noteId, actorId, targetUse
 
     // Set notification content based on type
     switch (type) {
-      case 'userJoined':
-        notificationData.title = 'User Joined Note';
-        notificationData.message = `${actor.fullname} joined "${note.title}"`;
-        break;
-      case 'userLeft':
-        notificationData.title = 'User Left Note';
-        notificationData.message = `${actor.fullname} left "${note.title}"`;
-        break;
       case 'collaboratorAdded':
         notificationData.title = 'Collaborator Added';
         notificationData.message = `${actor.fullname} added you as a collaborator to "${note.title}"`;

@@ -60,6 +60,17 @@ const addCollaborator = async (req, res) => {
   }
 };
 
+const removeCollaborator = async (req, res) => {
+  try {
+    const { id: noteId, collaboratorId } = req.params;
+
+    const updatedNote = await NoteService.removeCollaborator(noteId, collaboratorId, req.user._id);
+    res.status(200).json(updatedNote);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 const togglePinNote = async (req, res) => {
   try {
     const { id: noteId } = req.params;
@@ -82,5 +93,6 @@ module.exports = {
   updateNote,
   deleteNote,
   addCollaborator,
+  removeCollaborator,
   togglePinNote,
 };

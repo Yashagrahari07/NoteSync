@@ -1,6 +1,7 @@
 const axios = require('axios');
 const Note = require("../models/note.model");
 const userModel = require("../models/user.model");
+const NotificationService = require("./notification.service");
 
 exports.createNote = async (data, userId) => {
   try {
@@ -89,6 +90,46 @@ exports.addCollaborator = async (noteId, email, userId) => {
     fullname: collaborator.fullname,
   });
   await note.save();
+
+  // Create notification for the added collaborator
+  await NotificationService.createUserActivityNotification(
+    'collaboratorAdded',
+    noteId,
+    userId,
+    [collaborator._id]
+  );
+
+  return {
+    ...note.toObject(),
+    collaborators: note.collaborators.map((collab) => ({
+      email: collab.email,
+      fullname: collab.fullname,
+    })),
+  };
+};
+
+// Remove collaborator from note
+exports.removeCollaborator = async (noteId, collaboratorId, userId) => {
+  const note = await Note.findOne({ _id: noteId, userId });
+  if (!note) throw new Error("Note not found or unauthorized");
+
+  const collaboratorIndex = note.collaborators.findIndex(
+    (collab) => collab.userId.toString() === collaboratorId
+  );
+
+  if (collaboratorIndex === -1) throw new Error("Collaborator not found");
+
+  const removedCollaborator = note.collaborators[collaboratorIndex];
+  note.collaborators.splice(collaboratorIndex, 1);
+  await note.save();
+
+  // Create notification for the removed collaborator
+  await NotificationService.createUserActivityNotification(
+    'collaboratorRemoved',
+    noteId,
+    userId,
+    [removedCollaborator.userId]
+  );
 
   return {
     ...note.toObject(),

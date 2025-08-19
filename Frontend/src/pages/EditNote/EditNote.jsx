@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../../components/Button/Button";
 import { Input } from "../../components/Input/Input";
 import { Textarea } from "../../components/TeaxtArea/Textarea";
-import { Tag, Pin } from "lucide-react";
+import { Tag, Pin, Eye, EyeOff, ArrowLeft, Users, Copy, LogOut } from "lucide-react";
 import { io } from "socket.io-client";
 import { getNoteById, addCollaborator } from "../../services/noteService";
 
@@ -20,6 +20,7 @@ export default function EditNote() {
   const [isPinned, setIsPinned] = useState(false);
   const [collaboratorEmail, setCollaboratorEmail] = useState("");
   const [activeUsers, setActiveUsers] = useState([]);
+  const [isLivePreview, setIsLivePreview] = useState(false);
 
   const navigate = useNavigate();
   const { noteId } = useParams();
@@ -128,135 +129,486 @@ export default function EditNote() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-b from-slate-100 to-slate-200 p-6 flex">
-      <div className="flex-1 max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-6 space-y-6 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Header */}
+      <div className="bg-white/90 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-40 shadow-sm">
+        <div className="px-4 lg:px-8 py-5">
         <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6">
           <button
             onClick={() => navigate(-1)}
-            className="text-slate-600 hover:text-black text-sm"
+                className="flex items-center gap-3 text-gray-700 hover:text-gray-900 transition-all duration-200 hover:bg-gray-100 px-3 py-2 rounded-lg group"
           >
-            ← Back
+                <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform duration-200" />
+                <span className="hidden sm:inline font-medium">Back to Dashboard</span>
           </button>
 
+              <div className="h-8 w-px bg-gradient-to-b from-gray-300 to-gray-200"></div>
+              
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-0 w-3 h-3 bg-emerald-400 rounded-full animate-ping"></div>
+                </div>
+                <span className="text-sm font-medium text-gray-700">Live Collaboration</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              {/* Live Preview Toggle */}
+              <button
+                onClick={() => setIsLivePreview(!isLivePreview)}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                  isLivePreview
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                }`}
+              >
+                {isLivePreview ? <EyeOff size={18} /> : <Eye size={18} />}
+                <span className="hidden sm:inline">
+                  {isLivePreview ? 'Hide Preview' : 'Live Preview'}
+                </span>
+              </button>
+
+              {/* Pin Button */}
           <button
             onClick={() => setIsPinned(!isPinned)}
-            className={`flex items-center gap-1 text-sm font-medium rounded-full px-3 py-1 border ${
-              isPinned ? "bg-yellow-300 text-black" : "bg-slate-200 text-slate-700"
-            } hover:bg-yellow-400 transition`}
-          >
-            <Pin size={16} /> {isPinned ? "Pinned" : "Pin Note"}
+                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                  isPinned
+                    ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/25'
+                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-amber-300 hover:bg-amber-50'
+                }`}
+              >
+                <Pin size={18} />
+                <span className="hidden sm:inline">
+                  {isPinned ? 'Pinned' : 'Pin'}
+                </span>
           </button>
-        </div>
-
-        <Input
-          value={title}
-          onChange={handleTitleChange}
-          placeholder="Note Title"
-          className="text-2xl font-semibold border-none focus:ring-2 focus:ring-blue-500 mb-0"
-        />
-
-        <div className="flex items-center justify-between mt-2 mb-2">
-          <div className="text-sm text-slate-500">Created on: {createdOn}</div>
-          <div className="text-sm text-slate-500">Updated on: {updatedOn}</div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Tag className="text-slate-500" size={16} />
-          <Input
-            value={tags}
-            onChange={handleTagsChange}
-            placeholder="Tags (comma separated)"
-            className="flex-1 border-slate-300"
-          />
-        </div>
-
-        <Textarea
-          value={content}
-          onChange={handleContentChange}
-          rows={10}
-          placeholder="Write your note here..."
-          className="resize-none w-full border-slate-300 focus:ring-2 focus:ring-blue-500"
-        />
-
-        <div className="p-4 bg-gray-100 border-l-4 border-blue-500 flex-1">
-          <p className="text-lg font-semibold">Quote of the Day:</p>
-          <p className="italic">"{quote.text}"</p>
-          <p className="text-right text-sm">- {quote.author}</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="w-80 bg-white rounded-2xl shadow-xl p-6 ml-6 flex flex-col justify-between h-full">
-        <div>
-          <div className="text-lg font-semibold text-slate-700">Active Users</div>
-          <div className="flex flex-wrap gap-2 mt-2">
-            {activeUsers.map((fullname, index) => (
-              <div
-                key={index}
-                className="h-auto w-fit px-2 flex items-center justify-center rounded-full text-slate-950 text-sm bg-slate-100"
-              >
-                {fullname}
+      {/* Main Content and Sidebar Container */}
+      <div className="flex">
+        {/* Main Content Area */}
+        <div className="flex-1 px-4 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Live Preview Section (Left) */}
+            {isLivePreview && (
+              <div className="lg:col-span-5 space-y-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50"></div>
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-6">
+                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                        Live Preview
+                      </h3>
+                      <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                        Active
+                      </div>
+                    </div>
+                    
+                    <div className="prose prose-sm max-w-none">
+                      <h1 className="text-2xl font-bold text-gray-800 mb-4 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                        {title || 'Untitled Note'}
+                      </h1>
+                      
+                      {tags && (
+                        <div className="flex flex-wrap gap-2 mb-6">
+                          {tags.split(',').map((tag, index) => (
+                            <span
+                              key={index}
+                              className="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-full text-xs font-semibold shadow-sm"
+                            >
+                              {tag.trim()}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-sm bg-white/60 p-4 rounded-xl border border-white/30">
+                        {content || 'Start writing your note to see the preview...'}
+                      </div>
+
+                      <div className="mt-8 p-6 bg-gradient-to-br from-blue-100/80 to-indigo-100/80 rounded-2xl border border-blue-200/50 backdrop-blur-sm">
+                        <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          Quote of the Day
+                        </h4>
+                        <blockquote className="text-gray-700 italic text-sm mb-2 leading-relaxed">
+                          "{quote.text}"
+                        </blockquote>
+                        <cite className="text-xs text-gray-500 font-medium">— {quote.author}</cite>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
+            )}
+
+            {/* Editor Section */}
+            <div className={`${isLivePreview ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-6`}>
+              {/* Title */}
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-50/60 to-gray-50/60 group-hover:from-slate-100/60 group-hover:to-gray-100/60 transition-all duration-300"></div>
+                <div className="relative">
+                                    <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
+                      <div className="w-5 h-5 bg-white rounded-lg flex items-center justify-center">
+                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Note Title</span>
+                  </div>
+                  <div className="w-full">
+                    <Input
+                      value={title}
+                      onChange={handleTitleChange}
+                      placeholder="Enter a compelling title for your note..."
+                      className="w-full text-3xl font-bold border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent leading-tight"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200/50">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium text-gray-600">Created: {createdOn}</span>
+                      </div>
+                      <div className="w-px h-4 bg-gray-300"></div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium text-gray-600">Updated: {updatedOn}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                        Auto-save enabled
+                      </div>
+                    </div>
+                  </div>
+                </div>
+        </div>
+
+              {/* Tags */}
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 to-indigo-50/60 group-hover:from-blue-100/60 group-hover:to-indigo-100/60 transition-all duration-300"></div>
+                <div className="relative">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
+                      <Tag className="text-white" size={20} />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Tags & Categories</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+          <Input
+            value={tags}
+            onChange={handleTagsChange}
+                      placeholder="Add tags separated by commas (e.g., work, ideas, important)..."
+                      className="flex-1 border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 text-lg font-medium"
+                    />
+                    <div className="flex-shrink-0">
+                      <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                        {tags.split(',').filter(tag => tag.trim()).length} tags
+                      </div>
+                    </div>
+                  </div>
+                  {tags && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {tags.split(',').filter(tag => tag.trim()).map((tag, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-medium border border-purple-200"
+                        >
+                          {tag.trim()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Content Editor */}
+              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-50/60 to-gray-50/60 group-hover:from-slate-100/60 group-hover:to-gray-100/60 transition-all duration-300"></div>
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl">
+                        <div className="w-5 h-5 bg-white rounded-lg flex items-center justify-center">
+                          <div className="w-2 h-2 bg-emerald-600 rounded-full"></div>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Note Content</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                        {content.length} characters
+                      </div>
+                      <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                        {content.split('\n').length} lines
+                      </div>
+                    </div>
+        </div>
+
+                  <div className="relative">
+        <Textarea
+          value={content}
+          onChange={handleContentChange}
+                      rows={28}
+                      placeholder="Start writing your note here... 
+
+💡 Tips:
+• Use clear, concise language
+• Break content into paragraphs
+• Add bullet points for lists
+• Include relevant details"
+                      className="resize-none w-full border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 text-gray-800 leading-relaxed text-lg font-medium"
+                    />
+                    
+                    {/* Editor Footer */}
+                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200/50">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                          <span>Real-time collaboration</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                          <span>Auto-save active</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                          {new Date().toLocaleTimeString()}
+                        </div>
+                      </div>
+                    </div>
+        </div>
+      </div>
+              </div>
+
+              {/* Quote Section */}
+              <div className="bg-gradient-to-br from-blue-100/90 to-indigo-100/90 rounded-2xl border border-blue-200/60 p-8 backdrop-blur-xl relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 to-indigo-50/40 group-hover:from-blue-100/40 group-hover:to-indigo-100/40 transition-all duration-300"></div>
+                <div className="relative">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl">
+                      <div className="w-5 h-5 bg-white rounded-lg flex items-center justify-center">
+                        <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Daily Inspiration</span>
           </div>
 
-          <div className="mt-6">
-            <div className="text-lg font-semibold text-slate-700">Owner</div>
-            <div className="h-auto w-fit px-2 flex items-center justify-center rounded-full text-slate-950 text-sm bg-slate-100">
-              {owner}
+                  <div className="bg-white/60 rounded-2xl p-6 border border-white/50 backdrop-blur-sm">
+                    <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-3">
+                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                      Quote of the Day
+                    </h3>
+                    <blockquote className="text-gray-700 italic text-lg mb-4 leading-relaxed font-medium">
+                      "{quote.text}"
+                    </blockquote>
+                    <cite className="text-sm text-gray-500 font-semibold flex items-center gap-2">
+                      <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                      — {quote.author}
+                    </cite>
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+      </div>
+
+        {/* Right Sidebar - Collaboration Features */}
+        <div className="w-80 bg-white/90 backdrop-blur-xl border-l border-white/30 flex flex-col shadow-2xl">
+          {/* Sidebar Header */}
+          <div className="p-6 border-b border-white/20 bg-gradient-to-r from-slate-50 to-gray-50">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="text-blue-600" size={20} />
+              </div>
+              Collaboration
+            </h2>
+            <p className="text-sm text-gray-600 mt-2 font-medium">Manage team and access</p>
+          </div>
+
+          {/* Sidebar Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Active Users */}
+            <div className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 rounded-2xl p-6 border border-emerald-200/50 backdrop-blur-sm">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-emerald-100 rounded-lg">
+                  <Users className="text-emerald-600" size={18} />
+                </div>
+                <h3 className="font-bold text-gray-800 text-sm">Active Users</h3>
+                <div className="ml-auto flex items-center gap-2">
+                  <span className="text-xs font-semibold text-emerald-600 bg-emerald-100 px-2 py-1 rounded-full">
+                    {activeUsers.length}
+                  </span>
+                  <div className="relative">
+                    <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <div className="absolute inset-0 w-3 h-3 bg-emerald-400 rounded-full animate-ping"></div>
+                  </div>
             </div>
           </div>
 
-          <div className="mt-6">
-            <div className="text-lg font-semibold text-slate-700">Collaborators</div>
-            <div className="space-y-2 mt-2">
-              {collaborators.map((collaborator, index) => (
+              <div className="space-y-3">
+                {activeUsers.length > 0 ? (
+                  activeUsers.map((fullname, index) => (
                 <div
                   key={index}
-                  className="h-auto w-fit px-2 flex items-center justify-center rounded-full text-slate-950 text-sm bg-slate-100"
-                >
-                  {collaborator.fullname}
+                      className="flex items-center gap-3 p-3 bg-white/80 rounded-xl border border-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="relative">
+                        <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          {fullname.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white"></div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-semibold text-gray-700 truncate block">{fullname}</span>
+                        <span className="text-xs text-emerald-600 font-medium">Online</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Users className="text-emerald-400" size={20} />
+                    </div>
+                    <p className="text-xs text-gray-500 font-medium">No active users</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Owner */}
+            <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 rounded-2xl p-6 border border-blue-200/50 backdrop-blur-sm">
+              <h3 className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                 </div>
-              ))}
+                Owner
+              </h3>
+              <div className="flex items-center gap-3 p-3 bg-white/80 rounded-xl border border-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="relative">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    {owner.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </div>
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-blue-500 rounded-full border-2 border-white"></div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-semibold text-gray-700 truncate block">{owner}</span>
+                  <span className="text-xs text-blue-600 font-medium">Owner</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Collaborators */}
+            <div className="bg-gradient-to-br from-purple-50/80 to-pink-50/80 rounded-2xl p-6 border border-purple-200/50 backdrop-blur-sm">
+              <h3 className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-3">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                </div>
+                Collaborators
+                <span className="ml-auto text-xs font-semibold text-purple-600 bg-purple-100 px-2 py-1 rounded-full">
+                  {collaborators.length}
+                </span>
+              </h3>
+              <div className="space-y-3">
+                {collaborators.length > 0 ? (
+                  collaborators.map((collaborator, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-3 p-3 bg-white/80 rounded-xl border border-white/50 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
+                    >
+                      <div className="relative">
+                        <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                          {collaborator.fullname.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-purple-500 rounded-full border-2 border-white"></div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-semibold text-gray-700 truncate block">{collaborator.fullname}</span>
+                        <span className="text-xs text-purple-600 font-medium">Collaborator</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                      <Users className="text-purple-400" size={20} />
+                    </div>
+                    <p className="text-xs text-gray-500 font-medium">No collaborators yet</p>
+                  </div>
+                )}
             </div>
           </div>
 
-          <div className="mt-6">
-            <div className="text-lg font-semibold text-slate-700">Add Collaborator</div>
-            <div className="mt-2">
+            {/* Add Collaborator */}
+            <div className="bg-gradient-to-br from-amber-50/80 to-orange-50/80 rounded-2xl p-6 border border-amber-200/50 backdrop-blur-sm">
+              <h3 className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-3">
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                </div>
+                Add Collaborator
+              </h3>
+              <div className="space-y-4">
               <input
                 type="email"
                 value={collaboratorEmail}
                 onChange={(e) => setCollaboratorEmail(e.target.value)}
-                placeholder="Enter email"
-                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter email address"
+                  className="w-full px-4 py-3 border-2 border-white/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm bg-white/80 backdrop-blur-sm"
               />
               <button
                 onClick={handleAddCollaborator}
-                className="mt-2 w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all duration-300 font-semibold text-sm transform hover:scale-105 shadow-lg"
               >
                 Add Collaborator
               </button>
             </div>
+            </div>
+
+                        {/* Room Info */}
+            <div className="bg-gradient-to-br from-red-50/80 to-pink-50/80 rounded-2xl p-6 border border-red-200/50 backdrop-blur-sm">
+              <h3 className="font-bold text-gray-800 text-sm mb-4 flex items-center gap-3">
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                </div>
+                Room Info
+              </h3>
+              <div className="space-y-4">
+                <div className="bg-white/80 rounded-xl border border-white/50 backdrop-blur-sm shadow-sm p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+                        <span className="text-xs font-mono font-semibold text-gray-800 break-all">{roomId}</span>
           </div>
         </div>
-
-        <div className="space-y-4 mt-6">
-          <div className="flex justify-between items-center text-sm text-slate-600">
-            <span>Room ID: {roomId}</span>
             <button
               onClick={handleCopyRoomId}
-              className="text-blue-600 hover:underline"
+                      className="flex-shrink-0 p-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-lg hover:from-blue-600 hover:to-indigo-600 transition-all duration-200 transform hover:scale-105 shadow-md"
+                      title="Copy Room ID"
             >
-              Copy
+                      <Copy size={14} />
             </button>
+                  </div>
           </div>
 
-          <Button
+                <button
             onClick={handleLeave}
-            className="w-full px-4 py-2 rounded-full text-white bg-red-600 hover:bg-red-700"
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:from-red-600 hover:to-pink-600 transition-all duration-300 font-semibold text-sm transform hover:scale-105 shadow-lg"
           >
+                  <LogOut size={16} />
             Leave Room
-          </Button>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

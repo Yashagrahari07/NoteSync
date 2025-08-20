@@ -7,6 +7,7 @@ const connectToDb = require('./config/db');
 const userRoutes = require('./routes/user.routes');
 const noteRoutes = require('./routes/note.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const userPreferencesRoutes = require('./routes/userPreferences.routes');
 
 const app = express();
 
@@ -29,5 +30,6 @@ app.get('/', (req, res) => {
 app.use('/users', userRoutes);
 app.use('/notes', noteRoutes);
 app.use('/notifications', notificationRoutes);
+app.use('/user-preferences', userPreferencesRoutes);
 
 module.exports = app;

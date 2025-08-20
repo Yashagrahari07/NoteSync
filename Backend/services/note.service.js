@@ -46,7 +46,7 @@ exports.getNoteById = async (id, userId) => {
     });
 
     if (!note) {
-      console.log(`Note not found for ID: ${id} and user: ${userId}`);
+      return null;
     }
 
     return note;
@@ -92,12 +92,23 @@ exports.addCollaborator = async (noteId, email, userId) => {
   await note.save();
 
   // Create notification for the added collaborator
-  await NotificationService.createUserActivityNotification(
-    'collaboratorAdded',
-    noteId,
-    userId,
-    [collaborator._id]
-  );
+  try {
+    const actionUser = await userModel.findById(userId);
+    const noteOwner = await userModel.findById(note.userId);
+    
+
+    
+    await NotificationService.createCollaboratorNotification(
+      'collaboratorAdded',
+      noteId,
+      note.title,
+      noteOwner,
+      collaborator._id,
+      actionUser
+    );
+  } catch (error) {
+    console.error('Error creating collaborator notification:', error);
+  }
 
   return {
     ...note.toObject(),
@@ -124,12 +135,23 @@ exports.removeCollaborator = async (noteId, collaboratorId, userId) => {
   await note.save();
 
   // Create notification for the removed collaborator
-  await NotificationService.createUserActivityNotification(
-    'collaboratorRemoved',
-    noteId,
-    userId,
-    [removedCollaborator.userId]
-  );
+  try {
+    const actionUser = await userModel.findById(userId);
+    const noteOwner = await userModel.findById(note.userId);
+    
+
+    
+    await NotificationService.createCollaboratorNotification(
+      'collaboratorRemoved',
+      noteId,
+      note.title,
+      noteOwner,
+      removedCollaborator.userId,
+      actionUser
+    );
+  } catch (error) {
+    console.error('Error creating collaborator removal notification:', error);
+  }
 
   return {
     ...note.toObject(),

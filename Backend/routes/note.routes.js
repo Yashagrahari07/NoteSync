@@ -17,6 +17,8 @@ router.delete("/:id", noteController.deleteNote);
 
 router.post("/:id/collaborators", noteController.addCollaborator);
 
+router.delete("/:id/collaborators/:collaboratorId", noteController.removeCollaborator);
+
 router.patch("/:id/pin", noteController.togglePinNote);
 
 module.exports = router;

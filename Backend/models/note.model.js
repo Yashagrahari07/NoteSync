@@ -57,6 +57,16 @@ const noteSchema = new Schema({
     text: { type: String, default: '' },
     author: { type: String, default: '' }
   },
+  // Phase 1: Enhanced real-time collaboration fields
+  cursorPositions: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: "user" },
+    userFullname: String,
+    position: {
+      line: Number,
+      ch: Number
+    },
+    timestamp: { type: Date, default: Date.now }
+  }],
   createdOn: {
     type: Date,
     default: Date.now

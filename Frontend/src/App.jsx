@@ -8,7 +8,6 @@ import JoinNote from './pages/JoinNote/JoinNote';
 import EditNote from './pages/EditNote/EditNote';
 import PrivateRoute from './components/PrivateRoute';
 import { ToastProvider } from './components/Toast';
-import PythonToCppConverter from './components/component';
 
 const NotFoundPage = () => (
   <div style={{ textAlign: 'center', marginTop: '50px' }}>
@@ -44,7 +43,6 @@ const App = () => {
       <Router>
         <Routes>
           <Route path="/login" element={token ? <Navigate to="/dashboard" /> : <Login />} />
-          <Route path="/component" element={<PythonToCppConverter />} />
           <Route path="/signup" element={token ? <Navigate to="/dashboard" /> : <SignUp />} />
 
           <Route path="/" element={token ? <Navigate to="/dashboard" /> : <LandingPage />} />

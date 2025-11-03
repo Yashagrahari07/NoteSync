@@ -65,6 +65,7 @@ export default function EditNote() {
   const {
     conflicts,
     isResolving,
+    getLastContent,
     initializeContent,
     handleContentChange: handleOTContentChange,
     handleRemoteOperation,
@@ -314,7 +315,9 @@ export default function EditNote() {
 
   const handleContentChange = (e) => {
     const newContent = e.target.value;
-    const oldContent = content;
+    // Use lastContentRef as the source of truth, not React state
+    // This ensures operations are created based on the actual synchronized content
+    const oldContent = getLastContent() || content;
     setContent(newContent);
 
     // Phase 2: Use Operational Transformation for conflict resolution

@@ -10,6 +10,7 @@ export const useOperationalTransformation = (noteId, socketRef) => {
   const [isResolving, setIsResolving] = useState(false);
   const lastContentRef = useRef('');
   const isProcessingRef = useRef(false); // Prevent concurrent operation processing
+  const pendingChangeRef = useRef(null); // Queue pending changes during processing
   
   /**
    * Initialize lastContentRef with initial content
@@ -138,28 +139,77 @@ export const useOperationalTransformation = (noteId, socketRef) => {
 
   /**
    * Handle content change and create operations
+   * IMPORTANT: oldContent should be lastContentRef.current to ensure correct positions
    */
   const handleContentChange = useCallback((oldContent, newContent, userId) => {
     if (oldContent === newContent) return;
     
-    // Prevent concurrent processing
-    if (isProcessingRef.current) return;
+    // Ensure we're using the actual synchronized content
+    const actualOldContent = lastContentRef.current || oldContent;
+    if (actualOldContent !== oldContent) {
+      // Content has changed, recalculate from actual state
+      const recalculatedOps = createOperationsFromChange(actualOldContent, newContent, userId);
+      if (recalculatedOps.length > 0) {
+        recalculatedOps.forEach(operation => {
+          sendOperation(operation, userId);
+        });
+        lastContentRef.current = newContent;
+      }
+      return;
+    }
+    
+    // Prevent concurrent processing - queue the change
+    if (isProcessingRef.current) {
+      // Store the pending change and process it after current operation completes
+      pendingChangeRef.current = { newContent, userId };
+      return;
+    }
     isProcessingRef.current = true;
 
-    const newOperations = createOperationsFromChange(oldContent, newContent, userId);
+    const newOperations = createOperationsFromChange(actualOldContent, newContent, userId);
+    
+    if (newOperations.length === 0) {
+      isProcessingRef.current = false;
+      return;
+    }
+    
+    // Update lastContentRef immediately to reflect the operations we're about to send
+    // This ensures subsequent operations use the correct base state
+    let tempContent = actualOldContent;
+    for (const operation of newOperations) {
+      tempContent = applyOperation(tempContent, operation);
+    }
+    lastContentRef.current = tempContent;
     
     // Send each operation
     newOperations.forEach(operation => {
       sendOperation(operation, userId);
     });
-
-    lastContentRef.current = newContent;
     
-    // Reset processing flag after a short delay
+    // Reset processing flag and process any pending changes
     setTimeout(() => {
       isProcessingRef.current = false;
-    }, 100);
-  }, [createOperationsFromChange, sendOperation]);
+      
+      // Process pending change if any
+      if (pendingChangeRef.current) {
+        const { newContent: pendingNew, userId: pendingUserId } = pendingChangeRef.current;
+        pendingChangeRef.current = null;
+        const currentContent = lastContentRef.current;
+        if (currentContent !== pendingNew) {
+          // Process the pending change
+          const ops = createOperationsFromChange(currentContent, pendingNew, pendingUserId);
+          if (ops.length > 0) {
+            let tempContent = currentContent;
+            for (const op of ops) {
+              tempContent = applyOperation(tempContent, op);
+              sendOperation(op, pendingUserId);
+            }
+            lastContentRef.current = tempContent;
+          }
+        }
+      }
+    }, 50);
+  }, [createOperationsFromChange, sendOperation, applyOperation]);
 
   /**
    * Handle remote operation
@@ -228,12 +278,18 @@ export const useOperationalTransformation = (noteId, socketRef) => {
     setIsResolving(false);
   }, []);
 
+  // Expose getter for lastContent to allow EditNote to access current state
+  const getLastContent = useCallback(() => {
+    return lastContentRef.current;
+  }, []);
+
   return {
     operations,
     version,
     conflicts,
     isResolving,
     lastContent: lastContentRef.current,
+    getLastContent,
     initializeContent,
     handleContentChange,
     handleRemoteOperation,

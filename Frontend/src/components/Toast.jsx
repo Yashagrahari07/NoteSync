@@ -28,7 +28,7 @@ const Toast = ({
   };
 
   const getToastStyles = () => {
-    const baseStyles = "fixed top-4 right-4 z-50 max-w-sm w-full bg-white rounded-xl shadow-2xl border transform transition-all duration-300 ease-in-out";
+    const baseStyles = "fixed top-4 right-4 z-50 max-w-sm w-full bg-white rounded-xl border transform transition-all duration-300 ease-in-out";
     
     if (isExiting) {
       return `${baseStyles} translate-x-full opacity-0`;

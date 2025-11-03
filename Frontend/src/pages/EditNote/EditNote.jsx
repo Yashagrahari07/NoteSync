@@ -167,6 +167,7 @@ export default function EditNote() {
     socketRef.current.on("noteData", (note) => {
       setTitle(note.title);
       setContent(note.content);
+      initializeContent(note.content);
       setTags(note.tags.join(", "));
       setCreatedOn(new Date(note.createdOn).toISOString().slice(0, 10));
       setUpdatedOn(new Date(note.updatedOn).toISOString().slice(0, 10));
@@ -281,10 +282,11 @@ export default function EditNote() {
     return () => {
       if (socketRef.current) {
         socketRef.current.emit("leaveNote", noteId);
+        socketRef.current.removeAllListeners();
         socketRef.current.disconnect();
       }
     };
-  }, [noteId]);
+  }, [noteId, initializeContent, handleRemoteOperation, handleConflictResolution, handleUserJoined, handleUserLeft, showInfo, showSuccess]);
 
 
 

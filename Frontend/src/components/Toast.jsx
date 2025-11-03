@@ -72,7 +72,7 @@ const Toast = ({
 
   return (
     <div className={getToastStyles()}>
-      <div className={`p-4 ${typeStyles.border} border-l-4 ${typeStyles.border.split('-')[0]}-500`}>
+      <div className={`p-4 ${typeStyles.border}`}>
         <div className="flex items-start gap-3">
           <div className="flex-shrink-0 mt-0.5">
             {typeStyles.icon}

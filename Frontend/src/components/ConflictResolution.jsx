@@ -81,8 +81,10 @@ const ConflictResolution = ({
         </div>
 
         <div className="p-6 space-y-4">
-          {conflicts.map((conflict, index) => (
-            <div key={conflict.id || index} className="border border-gray-200 rounded-lg p-4">
+          {conflicts.map((conflict, index) => {
+            const conflictId = conflict.id || `conflict-${index}`;
+            return (
+            <div key={conflictId} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2">
                   {getConflictTypeIcon(conflict.type)}
@@ -132,10 +134,10 @@ const ConflictResolution = ({
                 <label className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="radio"
-                    name={`conflict-${conflict.id || index}`}
+                    name={`conflict-${conflictId}`}
                     value="local"
-                    checked={selectedResolutions[conflict.id || index] === 'local'}
-                    onChange={() => handleResolutionChoice(conflict.id || index, 'local')}
+                    checked={selectedResolutions[conflictId] === 'local'}
+                    onChange={() => handleResolutionChoice(conflictId, 'local')}
                     className="text-blue-600 focus:ring-blue-500"
                   />
                   <span className="text-sm font-medium text-gray-900">
@@ -145,10 +147,10 @@ const ConflictResolution = ({
                 <label className="flex items-center space-x-3 cursor-pointer">
                   <input
                     type="radio"
-                    name={`conflict-${conflict.id || index}`}
+                    name={`conflict-${conflictId}`}
                     value="remote"
-                    checked={selectedResolutions[conflict.id || index] === 'remote'}
-                    onChange={() => handleResolutionChoice(conflict.id || index, 'remote')}
+                    checked={selectedResolutions[conflictId] === 'remote'}
+                    onChange={() => handleResolutionChoice(conflictId, 'remote')}
                     className="text-green-600 focus:ring-green-500"
                   />
                   <span className="text-sm font-medium text-gray-900">
@@ -157,7 +159,8 @@ const ConflictResolution = ({
                 </label>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="p-6 border-t border-gray-200 bg-gray-50">

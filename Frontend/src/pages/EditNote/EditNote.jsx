@@ -173,8 +173,11 @@ export default function EditNote() {
     });
 
     socketRef.current.on("noteUpdated", (updatedNote) => {
+      // Update non-content fields
+      // Content updates should come through operationApplied event for OT support
       setTitle(updatedNote.title);
-      setContent(updatedNote.content);
+      // Only update content if we're not using OT (fallback for non-OT updates)
+      // setContent(updatedNote.content);
       setTags(updatedNote.tags.join(", "));
       setUpdatedOn(new Date(updatedNote.updatedOn).toISOString().slice(0, 10));
     });
@@ -188,9 +191,12 @@ export default function EditNote() {
         setCurrentEditor(data.editor.fullname);
         setLiveEditStatus(`${data.editor.fullname} is editing...`);
         
-        // Update note content from other user's edits
+        // Update note fields from other user's edits
+        // Only update content if it's not being handled by OT (i.e., title/tags changed)
+        // Content changes should come through operationApplied event
         setTitle(data.note.title);
-        setContent(data.note.content);
+        // Don't update content here - let operationApplied handle it
+        // setContent(data.note.content);
         setTags(data.note.tags.join(", "));
         setUpdatedOn(new Date(data.note.updatedOn).toISOString().slice(0, 10));
         

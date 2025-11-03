@@ -44,6 +44,7 @@ class ConflictResolutionService {
         } catch (error) {
           if (error.message.startsWith('CONFLICT')) {
             conflicts.push({
+              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               operation1: currentOperation,
               operation2: pendingOp,
               type: error.message
@@ -189,7 +190,7 @@ class ConflictResolutionService {
    * @param {Array} resolutions - Array of resolutions
    */
   static async createConflictVersion(noteId, conflicts, resolutions) {
-    const note = await NoteModel.findById(noteId);
+    const note = await NoteModel.findById(noteId).populate('userId', 'fullname');
     if (!note) {
       throw new Error('Note not found');
     }
@@ -199,14 +200,17 @@ class ConflictResolutionService {
       .sort({ version: -1 });
     const versionNumber = lastVersion ? lastVersion.version + 1 : 1;
 
+    // Get owner fullname - use populated userId or fallback to owner.fullname
+    const ownerFullname = note.userId?.fullname || note.owner?.fullname || 'Unknown User';
+
     // Create version snapshot
     const version = new NoteVersionModel({
       noteId,
       version: versionNumber,
       content: note.content,
       title: note.title,
-      createdBy: note.userId,
-      createdByFullname: note.owner.fullname,
+      createdBy: note.userId?._id || note.userId,
+      createdByFullname: ownerFullname,
       conflictResolved: true,
       conflictDetails: {
         operations: conflicts.flatMap(conflict => [
@@ -268,6 +272,11 @@ class ConflictResolutionService {
       throw new Error('Version not found');
     }
 
+    // Get user info for createdByFullname
+    const UserModel = require('../models/user.model');
+    const user = await UserModel.findById(userId);
+    const userFullname = user?.fullname || 'Unknown User';
+
     // Update note content
     const updatedNote = await NoteModel.findByIdAndUpdate(noteId, {
       content: versionDoc.content,
@@ -286,10 +295,12 @@ class ConflictResolutionService {
       content: versionDoc.content,
       title: versionDoc.title,
       createdBy: userId,
+      createdByFullname: userFullname,
       changes: [{
         type: 'update',
         content: `Restored to version ${version}`,
         userId,
+        userFullname: userFullname,
         timestamp: new Date()
       }]
     });

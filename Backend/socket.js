@@ -120,14 +120,15 @@ module.exports.setupSocket = (server) => {
         // Get user preferences for live edit notifications
         const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
 
-        // Emit live edit event with user information
-        io.to(noteId).emit('liveEdit', {
+        // Emit live edit event with user information to OTHER users only (not sender)
+        // This prevents overwriting the sender's own input
+        socket.to(noteId).emit('liveEdit', {
           note: note,
           editor: { fullname: user.fullname, userId: socket.userId },
           timestamp: Date.now()
         });
 
-        // Send live edit notification if enabled
+        // Send live edit notification if enabled (to other users only)
         if (preferences.notifications.liveEdits) {
           socket.to(noteId).emit('notification', {
             type: 'liveEdit',
@@ -138,8 +139,8 @@ module.exports.setupSocket = (server) => {
           });
         }
 
-        // Also emit the regular noteUpdated event for backward compatibility
-        io.to(noteId).emit('noteUpdated', note);
+        // Also emit the regular noteUpdated event for backward compatibility (to other users only)
+        socket.to(noteId).emit('noteUpdated', note);
       } catch (err) {
         socket.emit('error', { message: 'Error updating the note' });
       }

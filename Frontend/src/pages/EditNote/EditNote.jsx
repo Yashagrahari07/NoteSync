@@ -42,6 +42,17 @@ export default function EditNote() {
   const [typingUsers, setTypingUsers] = useState([]);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
+  
+  // Track typing state to prevent socket updates from overwriting user input
+  const isTypingTitleRef = useRef(false);
+  const isTypingTagsRef = useRef(false);
+  const isTypingContentRef = useRef(false);
+  
+  // Debounce timeouts and last sent values for each field
+  const titleDebounceTimeoutRef = useRef(null);
+  const tagsDebounceTimeoutRef = useRef(null);
+  const lastSentTitleRef = useRef('');
+  const lastSentTagsRef = useRef('');
 
   // Phase 2: Conflict resolution state
   const [showConflictResolution, setShowConflictResolution] = useState(false);
@@ -185,10 +196,18 @@ export default function EditNote() {
     });
 
     socketRef.current.on("noteData", (note) => {
-      setTitle(note.title);
+      // noteData is only sent on initial join, so it's safe to update
+      // But still check if user is typing to be safe
+      if (!isTypingTitleRef.current) {
+        setTitle(note.title);
+        lastSentTitleRef.current = note.title;
+      }
       setContent(note.content);
       initializeContentRef.current(note.content);
-      setTags(note.tags.join(", "));
+      if (!isTypingTagsRef.current) {
+        setTags(note.tags.join(", "));
+        lastSentTagsRef.current = note.tags.join(", ");
+      }
       setCreatedOn(new Date(note.createdOn).toISOString().slice(0, 10));
       setUpdatedOn(new Date(note.updatedOn).toISOString().slice(0, 10));
       setQuote(note.quote);
@@ -197,12 +216,16 @@ export default function EditNote() {
     });
 
     socketRef.current.on("noteUpdated", (updatedNote) => {
-      // Update non-content fields
+      // Update non-content fields, but only if user is not actively typing
       // Content updates should come through operationApplied event for OT support
-      setTitle(updatedNote.title);
-      // Only update content if we're not using OT (fallback for non-OT updates)
-      // setContent(updatedNote.content);
-      setTags(updatedNote.tags.join(", "));
+      if (!isTypingTitleRef.current) {
+        setTitle(updatedNote.title);
+        lastSentTitleRef.current = updatedNote.title;
+      }
+      if (!isTypingTagsRef.current) {
+        setTags(updatedNote.tags.join(", "));
+        lastSentTagsRef.current = updatedNote.tags.join(", ");
+      }
       setUpdatedOn(new Date(updatedNote.updatedOn).toISOString().slice(0, 10));
     });
 
@@ -211,25 +234,29 @@ export default function EditNote() {
     socketRef.current.on("userLeft", handleUserLeft);
 
     socketRef.current.on("liveEdit", (data) => {
-      if (data.editor.userId !== currentUserIdRef.current) {
-        setCurrentEditor(data.editor.fullname);
-        setLiveEditStatus(`${data.editor.fullname} is editing...`);
-        
-        // Update note fields from other user's edits
-        // Only update content if it's not being handled by OT (i.e., title/tags changed)
-        // Content changes should come through operationApplied event
+      // This event now only comes from OTHER users (backend fixed)
+      // So we can safely update without checking userId
+      setCurrentEditor(data.editor.fullname);
+      setLiveEditStatus(`${data.editor.fullname} is editing...`);
+      
+      // Update note fields from other user's edits
+      // Only update if user is not actively typing in that field
+      if (!isTypingTitleRef.current) {
         setTitle(data.note.title);
-        // Don't update content here - let operationApplied handle it
-        // setContent(data.note.content);
-        setTags(data.note.tags.join(", "));
-        setUpdatedOn(new Date(data.note.updatedOn).toISOString().slice(0, 10));
-        
-        // Clear the status after 3 seconds
-        setTimeout(() => {
-          setCurrentEditor(null);
-          setLiveEditStatus("");
-        }, 3000);
+        lastSentTitleRef.current = data.note.title;
       }
+      if (!isTypingTagsRef.current) {
+        setTags(data.note.tags.join(", "));
+        lastSentTagsRef.current = data.note.tags.join(", ");
+      }
+      // Don't update content here - let operationApplied handle it
+      setUpdatedOn(new Date(data.note.updatedOn).toISOString().slice(0, 10));
+      
+      // Clear the status after 3 seconds
+      setTimeout(() => {
+        setCurrentEditor(null);
+        setLiveEditStatus("");
+      }, 3000);
     });
 
 
@@ -266,17 +293,23 @@ export default function EditNote() {
     socketRef.current.on("operationApplied", (data) => {
       // Update content if provided from server
       if (data.updatedContent !== undefined) {
-        setContent(data.updatedContent);
-        initializeContentRef.current(data.updatedContent);
+        // Only update if user is not actively typing
+        if (!isTypingContentRef.current) {
+          setContent(data.updatedContent);
+          initializeContentRef.current(data.updatedContent);
+        }
         return;
       }
       
       // Handle remote operation if no server content provided
       if (data.operation && data.operation.userId !== currentUserIdRef.current) {
-        const result = handleRemoteOperationRef.current(data.operation);
-        if (result.success) {
-          setContent(result.newContent);
-          initializeContentRef.current(result.newContent);
+        // Only apply remote operations if user is not actively typing
+        if (!isTypingContentRef.current) {
+          const result = handleRemoteOperationRef.current(data.operation);
+          if (result.success) {
+            setContent(result.newContent);
+            initializeContentRef.current(result.newContent);
+          }
         }
       }
     });
@@ -291,7 +324,10 @@ export default function EditNote() {
     socketRef.current.on("versionRestored", (data) => {
       setContent(data.note.content);
       initializeContentRef.current(data.note.content);
+      // Version restore should always update title (user action, not typing)
       setTitle(data.note.title);
+      lastSentTitleRef.current = data.note.title;
+      isTypingTitleRef.current = false; // Reset typing flag
       showSuccessRef.current(`Note restored to version ${data.version}`);
     });
 
@@ -318,6 +354,10 @@ export default function EditNote() {
     // Use lastContentRef as the source of truth, not React state
     // This ensures operations are created based on the actual synchronized content
     const oldContent = getLastContent() || content;
+    
+    // Mark that user is actively typing
+    isTypingContentRef.current = true;
+    
     setContent(newContent);
 
     // Phase 2: Use Operational Transformation for conflict resolution
@@ -335,6 +375,8 @@ export default function EditNote() {
       
       const timeout = setTimeout(() => {
         socketRef.current.emit("typingStop", noteId);
+        // Reset typing flag after typing stops
+        isTypingContentRef.current = false;
       }, 1000);
       
       setTypingTimeout(timeout);
@@ -343,14 +385,99 @@ export default function EditNote() {
 
   const handleTitleChange = (e) => {
     const newTitle = e.target.value;
+    const oldTitle = title;
+    
+    // Mark that user is actively typing
+    isTypingTitleRef.current = true;
+    
+    // Calculate what character was typed/removed
+    let charTyped = '';
+    let action = '';
+    
+    if (newTitle.length > oldTitle.length) {
+      // Character(s) added
+      const addedLength = newTitle.length - oldTitle.length;
+      if (oldTitle.length === 0) {
+        charTyped = newTitle.substring(0, addedLength);
+      } else {
+        // Find where the difference is
+        let diffIndex = 0;
+        while (diffIndex < oldTitle.length && oldTitle[diffIndex] === newTitle[diffIndex]) {
+          diffIndex++;
+        }
+        charTyped = newTitle.substring(diffIndex, diffIndex + addedLength);
+      }
+      action = 'ADDED';
+    } else if (newTitle.length < oldTitle.length) {
+      // Character(s) removed
+      const removedLength = oldTitle.length - newTitle.length;
+      // Find where the difference is
+      let diffIndex = 0;
+      while (diffIndex < newTitle.length && oldTitle[diffIndex] === newTitle[diffIndex]) {
+        diffIndex++;
+      }
+      charTyped = oldTitle.substring(diffIndex, diffIndex + removedLength);
+      action = 'REMOVED';
+    } else {
+      // Same length - might be paste or replacement
+      let diffIndex = 0;
+      while (diffIndex < oldTitle.length && oldTitle[diffIndex] === newTitle[diffIndex]) {
+        diffIndex++;
+      }
+      if (diffIndex < oldTitle.length) {
+        charTyped = `REPLACED: "${oldTitle.substring(diffIndex)}" -> "${newTitle.substring(diffIndex)}"`;
+        action = 'REPLACED';
+      } else {
+        charTyped = 'NO_CHANGE';
+        action = 'NO_CHANGE';
+      }
+    }
+    
+    // Update UI immediately
     setTitle(newTitle);
-    socketRef.current.emit("editNote", noteId, { title: newTitle });
+    
+    // Clear existing debounce timeout
+    if (titleDebounceTimeoutRef.current) {
+      clearTimeout(titleDebounceTimeoutRef.current);
+    }
+    
+    // Debounce socket emission to avoid spam and race conditions
+    titleDebounceTimeoutRef.current = setTimeout(() => {
+      // Only send if title actually changed from last sent
+      if (newTitle !== lastSentTitleRef.current && socketRef.current) {
+        lastSentTitleRef.current = newTitle;
+        socketRef.current.emit("editNote", noteId, { title: newTitle });
+      }
+      // Reset typing flag after debounce period
+      isTypingTitleRef.current = false;
+    }, 300); // 300ms debounce
   };
 
   const handleTagsChange = (e) => {
     const newTags = e.target.value;
+    
+    // Mark that user is actively typing
+    isTypingTagsRef.current = true;
+    
+    // Update UI immediately
     setTags(newTags);
-    socketRef.current.emit("editNote", noteId, { tags: newTags.split(",") });
+    
+    // Clear existing debounce timeout
+    if (tagsDebounceTimeoutRef.current) {
+      clearTimeout(tagsDebounceTimeoutRef.current);
+    }
+    
+    // Debounce socket emission to avoid spam and race conditions
+    tagsDebounceTimeoutRef.current = setTimeout(() => {
+      // Only send if tags actually changed from last sent
+      const tagsString = newTags.split(",").map(t => t.trim()).join(",");
+      if (tagsString !== lastSentTagsRef.current && socketRef.current) {
+        lastSentTagsRef.current = tagsString;
+        socketRef.current.emit("editNote", noteId, { tags: newTags.split(",") });
+      }
+      // Reset typing flag after debounce period
+      isTypingTagsRef.current = false;
+    }, 300); // 300ms debounce
   };
 
   const handleAddCollaborator = async () => {

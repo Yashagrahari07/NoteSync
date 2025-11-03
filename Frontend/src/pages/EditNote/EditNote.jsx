@@ -65,6 +65,7 @@ export default function EditNote() {
   const {
     conflicts,
     isResolving,
+    initializeContent,
     handleContentChange: handleOTContentChange,
     handleRemoteOperation,
     handleConflictResolution,
@@ -96,6 +97,8 @@ export default function EditNote() {
       const note = await getNoteById(noteId);
       setTitle(note.title);
       setContent(note.content);
+      // Initialize OT hook with initial content
+      initializeContent(note.content);
       setTags(note.tags.join(", "));
       setCreatedOn(new Date(note.createdOn).toISOString().slice(0, 10));
       setUpdatedOn(new Date(note.updatedOn).toISOString().slice(0, 10));
@@ -243,6 +246,7 @@ export default function EditNote() {
       // Update content if provided from server
       if (data.updatedContent !== undefined) {
         setContent(data.updatedContent);
+        initializeContent(data.updatedContent);
         return;
       }
       
@@ -251,6 +255,7 @@ export default function EditNote() {
         const result = handleRemoteOperation(data.operation);
         if (result.success) {
           setContent(result.newContent);
+          initializeContent(result.newContent);
         }
       }
     });
@@ -264,6 +269,7 @@ export default function EditNote() {
 
     socketRef.current.on("versionRestored", (data) => {
       setContent(data.note.content);
+      initializeContent(data.note.content);
       setTitle(data.note.title);
       showSuccess(`Note restored to version ${data.version}`);
     });

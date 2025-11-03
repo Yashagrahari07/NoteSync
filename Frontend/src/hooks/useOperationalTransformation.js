@@ -9,6 +9,14 @@ export const useOperationalTransformation = (noteId, socketRef) => {
   const [conflicts, setConflicts] = useState([]);
   const [isResolving, setIsResolving] = useState(false);
   const lastContentRef = useRef('');
+  
+  /**
+   * Initialize lastContentRef with initial content
+   * This should be called when note content is loaded
+   */
+  const initializeContent = useCallback((initialContent) => {
+    lastContentRef.current = initialContent || '';
+  }, []);
 
   /**
    * Create operations from text change using improved diff algorithm
@@ -216,6 +224,7 @@ export const useOperationalTransformation = (noteId, socketRef) => {
     conflicts,
     isResolving,
     lastContent: lastContentRef.current,
+    initializeContent,
     handleContentChange,
     handleRemoteOperation,
     handleConflictResolution,

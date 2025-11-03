@@ -65,10 +65,24 @@ exports.updateNote = async (id, data, userId) => {
 };
 
 exports.deleteNote = async (id, userId) => {
-  const note = await Note.findOne({ _id: id, userId });
-  if (!note) return null;
+  // First check if note exists and user has access
+  const note = await Note.findOne({
+    _id: id,
+    $or: [{ userId }, { "collaborators.userId": userId }]
+  });
+  
+  if (!note) {
+    return { error: 'NOT_FOUND', message: 'Note not found' };
+  }
+  
+  // Check if user is the owner (only owners can delete)
+  if (note.userId.toString() !== userId.toString()) {
+    return { error: 'FORBIDDEN', message: 'You cannot delete this note. Only the owner can delete shared notes.' };
+  }
+  
+  // User is the owner, proceed with deletion
   await note.deleteOne();
-  return true;
+  return { success: true };
 };
 
 exports.addCollaborator = async (noteId, email, userId) => {

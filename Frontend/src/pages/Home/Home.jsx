@@ -6,6 +6,7 @@ import EmptyState from '../../components/EmptyState';
 import { MdAdd, MdSearch, MdFilterList, MdViewList, MdViewModule } from 'react-icons/md';
 import { useNavigate } from 'react-router-dom';
 import { getAllNotes, createNote, deleteNote, togglePinNote } from '../../services/noteService';
+import { useToastContext } from '../../components/Toast';
 
 const Home = () => {
   const [notes, setNotes] = useState([]);
@@ -16,6 +17,7 @@ const Home = () => {
   const [showPinnedOnly, setShowPinnedOnly] = useState(false);
   const [ownershipFilter, setOwnershipFilter] = useState('all'); // 'all', 'owned', 'shared'
   const navigate = useNavigate();
+  const { showError, showSuccess } = useToastContext();
 
   useEffect(() => {
     const fetchNotes = async () => {
@@ -47,8 +49,17 @@ const Home = () => {
       await deleteNote(noteId);
       setNotes((prevNotes) => prevNotes.filter((note) => note._id !== noteId));
       setFilteredNotes((prevNotes) => prevNotes.filter((note) => note._id !== noteId));
+      showSuccess('Note deleted successfully');
     } catch (err) {
       console.error('Failed to delete note:', err.message);
+      // Check if it's a 403 Forbidden error (collaborator trying to delete)
+      if (err.response && err.response.status === 403) {
+        showError(err.response.data?.message || 'You cannot delete this note. Only the owner can delete shared notes.');
+      } else if (err.response && err.response.status === 404) {
+        showError('Note not found');
+      } else {
+        showError('Failed to delete note. Please try again.');
+      }
     }
   };
 

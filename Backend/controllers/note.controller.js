@@ -40,9 +40,21 @@ const updateNote = async (req, res) => {
 
 const deleteNote = async (req, res) => {
   try {
-    const deleted = await NoteService.deleteNote(req.params.id, req.user._id);
-    if (!deleted) return res.status(404).json({ message: "Note not found or unauthorized" });
-    res.status(200).json({ message: "Note deleted" });
+    const result = await NoteService.deleteNote(req.params.id, req.user._id);
+    
+    if (result.error === 'NOT_FOUND') {
+      return res.status(404).json({ message: result.message || "Note not found" });
+    }
+    
+    if (result.error === 'FORBIDDEN') {
+      return res.status(403).json({ message: result.message || "You cannot delete this note. Only the owner can delete shared notes." });
+    }
+    
+    if (result.success) {
+      return res.status(200).json({ message: "Note deleted successfully" });
+    }
+    
+    res.status(404).json({ message: "Note not found or unauthorized" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

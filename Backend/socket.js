@@ -3,6 +3,8 @@ const NoteService = require('./services/note.service');
 const UserModel = require('./models/user.model');
 const UserPreferencesService = require('./services/userPreferences.service');
 const NotificationService = require('./services/notification.service');
+const ConflictResolutionService = require('./services/conflictResolution.service');
+const OperationalTransformation = require('./utils/operationalTransformation');
 
 const activeUsers = {};
 
@@ -136,69 +138,7 @@ module.exports.setupSocket = (server) => {
       }
     });
 
-    // Phase 1: Enhanced real-time collaboration events
-    socket.on('cursorMove', async (noteId, cursorData) => {
-      try {
-        const user = await UserModel.findById(socket.userId);
-        if (!user) return;
 
-        // Get user preferences for cursor visibility
-        const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
-        
-        if (preferences.realTime.showCursors) {
-          // Broadcast cursor position to other users
-          socket.to(noteId).emit('cursorMoved', {
-            userId: socket.userId,
-            userFullname: user.fullname,
-            cursor: cursorData,
-            timestamp: Date.now()
-          });
-        }
-
-        // Update cursor position in note document
-        const note = await NoteService.getNoteById(noteId, socket.userId);
-        if (note) {
-          // Remove old cursor position for this user
-          note.cursorPositions = note.cursorPositions.filter(
-            pos => pos.userId.toString() !== socket.userId
-          );
-          
-          // Add new cursor position
-          note.cursorPositions.push({
-            userId: socket.userId,
-            userFullname: user.fullname,
-            position: cursorData,
-            timestamp: Date.now()
-          });
-          
-          await note.save();
-        }
-      } catch (err) {
-        console.error('Error handling cursor move:', err);
-      }
-    });
-
-    socket.on('selectionChange', async (noteId, selectionData) => {
-      try {
-        const user = await UserModel.findById(socket.userId);
-        if (!user) return;
-
-        // Get user preferences for selection visibility
-        const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
-        
-        if (preferences.realTime.showSelections) {
-          // Broadcast selection change to other users
-          socket.to(noteId).emit('selectionChanged', {
-            userId: socket.userId,
-            userFullname: user.fullname,
-            selection: selectionData,
-            timestamp: Date.now()
-          });
-        }
-      } catch (err) {
-        console.error('Error handling selection change:', err);
-      }
-    });
 
     socket.on('typingStart', async (noteId) => {
       try {
@@ -363,6 +303,108 @@ module.exports.setupSocket = (server) => {
             timestamp: Date.now()
           });
         }
+      }
+    });
+
+    // Phase 2: Conflict Resolution Events
+    socket.on('applyOperation', async (noteId, operation) => {
+      try {
+        const user = await UserModel.findById(socket.userId);
+        if (!user) {
+          socket.emit('error', { message: 'User not found' });
+          return;
+        }
+
+        // Add user information to operation
+        operation.userId = socket.userId;
+        operation.userFullname = user.fullname;
+
+        // Process operation through conflict resolution system
+        const result = await ConflictResolutionService.processOperation(operation, noteId);
+
+        if (result.success) {
+          // Emit operation applied event to all users
+          io.to(noteId).emit('operationApplied', {
+            operation: result.transformedOperation,
+            conflicts: result.conflicts,
+            resolution: result.resolution,
+            updatedContent: result.updatedContent,
+            timestamp: Date.now()
+          });
+
+          // If conflicts were resolved, emit conflict resolution event
+          if (result.conflicts && result.conflicts.length > 0) {
+            io.to(noteId).emit('conflictResolved', {
+              conflicts: result.conflicts,
+              resolution: result.resolution,
+              timestamp: Date.now()
+            });
+          }
+        } else {
+          socket.emit('error', { message: 'Failed to apply operation' });
+        }
+      } catch (error) {
+        console.error('Error applying operation:', error);
+        socket.emit('error', { message: 'Error applying operation' });
+      }
+    });
+
+    socket.on('requestVersionHistory', async (noteId) => {
+      try {
+        const versions = await ConflictResolutionService.getVersionHistory(noteId, 10);
+        socket.emit('versionHistory', {
+          noteId,
+          versions,
+          timestamp: Date.now()
+        });
+      } catch (error) {
+        console.error('Error fetching version history:', error);
+        socket.emit('error', { message: 'Error fetching version history' });
+      }
+    });
+
+    socket.on('restoreVersion', async (noteId, version) => {
+      try {
+        const updatedNote = await ConflictResolutionService.restoreVersion(
+          noteId, 
+          version, 
+          socket.userId
+        );
+
+        // Emit version restored event to all users
+        io.to(noteId).emit('versionRestored', {
+          note: updatedNote,
+          version,
+          restoredBy: socket.userId,
+          timestamp: Date.now()
+        });
+      } catch (error) {
+        console.error('Error restoring version:', error);
+        socket.emit('error', { message: 'Error restoring version' });
+      }
+    });
+
+    socket.on('manualConflictResolution', async (noteId, resolution) => {
+      try {
+        // Handle manual conflict resolution
+        const user = await UserModel.findById(socket.userId);
+        if (!user) {
+          socket.emit('error', { message: 'User not found' });
+          return;
+        }
+
+        // Emit manual resolution event to all users
+        io.to(noteId).emit('manualResolutionApplied', {
+          resolution,
+          resolvedBy: {
+            userId: socket.userId,
+            fullname: user.fullname
+          },
+          timestamp: Date.now()
+        });
+      } catch (error) {
+        console.error('Error applying manual resolution:', error);
+        socket.emit('error', { message: 'Error applying manual resolution' });
       }
     });
   });

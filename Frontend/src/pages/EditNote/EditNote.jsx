@@ -1,19 +1,22 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { Button } from "../../components/Button/Button";
 import { Input } from "../../components/Input/Input";
 import { Textarea } from "../../components/TeaxtArea/Textarea";
-import { Tag, Pin, Eye, EyeOff, ArrowLeft, Users, Copy, LogOut, Settings } from "lucide-react";
+import { Tag, Pin, Eye, EyeOff, ArrowLeft, Users, Copy, LogOut, Settings, History } from "lucide-react";
 import { io } from "socket.io-client";
 import { getNoteById, addCollaborator } from "../../services/noteService";
 import { useToastContext } from "../../components/Toast";
 import { fetchUserPreferences } from "../../redux/slices/userPreferencesSlice";
-import CollaborativeCursor from "../../components/CollaborativeCursor";
-import SelectionHighlight from "../../components/SelectionHighlight";
+
 import TypingIndicator from "../../components/TypingIndicator";
 import NotificationSettings from "../../components/NotificationSettings";
-import { useCursorTracking } from "../../hooks/useCursorTracking";
+
+import { useOperationalTransformation } from "../../hooks/useOperationalTransformation";
+import ConflictResolution from "../../components/ConflictResolution";
+import VersionHistory from "../../components/VersionHistory";
+import ConflictIndicator from "../../components/ConflictIndicator";
 
 export default function EditNote() {
   const [title, setTitle] = useState("");
@@ -35,11 +38,16 @@ export default function EditNote() {
   const [liveEditStatus, setLiveEditStatus] = useState("");
   
   // Phase 1: Enhanced real-time collaboration state
-  const [remoteCursors, setRemoteCursors] = useState({});
-  const [remoteSelections, setRemoteSelections] = useState({});
+
   const [typingUsers, setTypingUsers] = useState([]);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [typingTimeout, setTypingTimeout] = useState(null);
+
+  // Phase 2: Conflict resolution state
+  const [showConflictResolution, setShowConflictResolution] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [currentConflicts, setCurrentConflicts] = useState([]);
+  const [isResolvingConflicts, setIsResolvingConflicts] = useState(false);
 
   const navigate = useNavigate();
   const { noteId } = useParams();
@@ -49,8 +57,20 @@ export default function EditNote() {
   const dispatch = useDispatch();
   const realTime = useSelector(state => state.userPreferences?.realTime);
 
-  // Phase 1: Cursor tracking hook
-  const { textareaRef } = useCursorTracking(socketRef, noteId, realTime?.showCursors);
+  // Create refs for text areas
+  const textareaRef = useRef(null);
+  const livePreviewTextareaRef = useRef(null);
+
+  // Phase 2: Operational Transformation hook
+  const {
+    conflicts,
+    isResolving,
+    handleContentChange: handleOTContentChange,
+    handleRemoteOperation,
+    handleConflictResolution,
+    resolveConflictManually,
+    clearConflicts
+  } = useOperationalTransformation(noteId, socketRef);
 
   // Socket event handlers - defined at top level to follow Rules of Hooks
   const handleUserJoined = useCallback((data) => {
@@ -67,6 +87,8 @@ export default function EditNote() {
     if (data.user.userId !== currentUserIdRef.current) {
       showInfo(`${data.user.fullname} left the note`);
     }
+    
+
   }, [showInfo]);
 
   const fetchNoteData = async () => {
@@ -180,32 +202,7 @@ export default function EditNote() {
       }
     });
 
-    // Phase 1: Enhanced real-time collaboration events
-    socketRef.current.on("cursorMoved", (data) => {
-      if (realTime?.showCursors) {
-        setRemoteCursors(prev => ({
-          ...prev,
-          [data.userId]: {
-            cursor: data.cursor,
-            userFullname: data.userFullname,
-            timestamp: data.timestamp
-          }
-        }));
-      }
-    });
 
-    socketRef.current.on("selectionChanged", (data) => {
-      if (realTime?.showSelections) {
-        setRemoteSelections(prev => ({
-          ...prev,
-          [data.userId]: {
-            selection: data.selection,
-            userFullname: data.userFullname,
-            timestamp: data.timestamp
-          }
-        }));
-      }
-    });
 
     socketRef.current.on("userTyping", (data) => {
       setTypingUsers(prev => {
@@ -235,6 +232,40 @@ export default function EditNote() {
       // No toast - only persistent notification will be shown
     });
 
+    // Phase 2: Conflict resolution events
+    socketRef.current.on("operationApplied", (data) => {
+      // Update content if provided from server
+      if (data.updatedContent !== undefined) {
+        setContent(data.updatedContent);
+        return;
+      }
+      
+      // Handle remote operation if no server content provided
+      if (data.operation && data.operation.userId !== currentUserIdRef.current) {
+        const result = handleRemoteOperation(data.operation);
+        if (result.success) {
+          setContent(result.newContent);
+        }
+      }
+    });
+
+    socketRef.current.on("conflictResolved", (data) => {
+      handleConflictResolution(data.conflicts, data.resolution);
+      setCurrentConflicts(data.conflicts);
+      setIsResolvingConflicts(true);
+      showInfo("Conflicts detected and resolved automatically");
+    });
+
+    socketRef.current.on("versionRestored", (data) => {
+      setContent(data.note.content);
+      setTitle(data.note.title);
+      showSuccess(`Note restored to version ${data.version}`);
+    });
+
+    socketRef.current.on("manualResolutionApplied", (data) => {
+      showInfo(`Manual conflict resolution applied by ${data.resolvedBy.fullname}`);
+    });
+
     return () => {
       if (socketRef.current) {
         socketRef.current.emit("leaveNote", noteId);
@@ -243,10 +274,19 @@ export default function EditNote() {
     };
   }, [noteId]);
 
+
+
+
+
   const handleContentChange = (e) => {
     const newContent = e.target.value;
+    const oldContent = content;
     setContent(newContent);
-    socketRef.current.emit("editNote", noteId, { content: newContent });
+
+    // Phase 2: Use Operational Transformation for conflict resolution
+    if (currentUserIdRef.current) {
+      handleOTContentChange(oldContent, newContent, currentUserIdRef.current);
+    }
 
     // Phase 1: Typing indicator
     if (socketRef.current) {
@@ -297,6 +337,10 @@ export default function EditNote() {
       alert("Room ID copied to clipboard!");
     });
   };
+
+
+
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -414,8 +458,16 @@ export default function EditNote() {
                         </div>
                       )}
 
-                      <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-sm bg-white/60 p-4 rounded-xl border border-white/30">
-                        {content || 'Start writing your note to see the preview...'}
+                      <div className="relative">
+                        <textarea
+                          ref={livePreviewTextareaRef}
+                          value={content || 'Start writing your note to see the preview...'}
+                          readOnly
+                          className="w-full text-gray-700 leading-relaxed whitespace-pre-wrap text-sm bg-white/60 p-4 rounded-xl border border-white/30 resize-none border-none focus:ring-0 bg-transparent"
+                          rows={Math.max(10, content.split('\n').length)}
+                        />
+                        
+
                       </div>
 
                       <div className="mt-8 p-6 bg-gradient-to-br from-blue-100/80 to-indigo-100/80 rounded-2xl border border-blue-200/50 backdrop-blur-sm">
@@ -435,6 +487,8 @@ export default function EditNote() {
                           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
                           Live Collaboration
                         </h4>
+                        
+
                         
                         {liveEditStatus && (
                           <div className="mb-3 p-2 bg-purple-100/80 rounded-lg border border-purple-200/50">
@@ -599,13 +653,8 @@ export default function EditNote() {
                       className="resize-none w-full border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 text-gray-800 leading-relaxed text-lg font-medium"
                     />
                     
-                    {/* Phase 1: Collaborative Cursors and Selections */}
-                    {realTime?.showCursors && (
-                      <CollaborativeCursor cursors={remoteCursors} textareaRef={textareaRef} />
-                    )}
-                    {realTime?.showSelections && (
-                      <SelectionHighlight selections={remoteSelections} textareaRef={textareaRef} />
-                    )}
+                    {/* Phase 1: Collaborative Cursors and Selections - REMOVED FROM MAIN CONTENT */}
+                    {/* Cursors and selections will only appear in Live Preview section */}
                     
                     {/* Editor Footer */}
                     <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200/50">
@@ -781,6 +830,28 @@ export default function EditNote() {
             <h3 className="text-lg font-bold text-gray-800 mb-4">Actions</h3>
             
             <div className="space-y-3">
+              {/* Phase 2: Conflict Indicator */}
+              <ConflictIndicator
+                hasConflicts={conflicts.length > 0}
+                isResolving={isResolving}
+                conflictCount={conflicts.length}
+                onResolve={() => setShowConflictResolution(true)}
+                className="w-full"
+              />
+
+              {/* Phase 2: Version History Button */}
+              <Button
+                onClick={() => setShowVersionHistory(true)}
+                className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+              >
+                <History size={16} />
+                Version History
+              </Button>
+
+
+
+
+
               <Button
                 onClick={handleLeave}
                 className="w-full flex items-center justify-center gap-2 bg-red-500 text-white hover:bg-red-600 transition-colors"
@@ -797,6 +868,29 @@ export default function EditNote() {
       <NotificationSettings 
         isOpen={showNotificationSettings} 
         onClose={() => setShowNotificationSettings(false)} 
+      />
+
+      {/* Phase 2: Conflict Resolution Modal */}
+      <ConflictResolution
+        conflicts={currentConflicts}
+        onResolve={resolveConflictManually}
+        onDismiss={() => {
+          setShowConflictResolution(false);
+          setCurrentConflicts([]);
+          setIsResolvingConflicts(false);
+        }}
+        isVisible={showConflictResolution}
+      />
+
+      {/* Phase 2: Version History Modal */}
+      <VersionHistory
+        noteId={noteId}
+        isVisible={showVersionHistory}
+        onClose={() => setShowVersionHistory(false)}
+        onRestore={(version) => {
+          setShowVersionHistory(false);
+        }}
+        socketRef={socketRef}
       />
     </div>
   );

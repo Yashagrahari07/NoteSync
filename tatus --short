@@ -1,0 +1,14 @@
+warning: in the working copy of 'Backend/models/userPreferences.model.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Frontend/src/components/NotificationSettings.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Frontend/src/pages/EditNote/EditNote.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'Frontend/src/redux/slices/userPreferencesSlice.js', LF will be replaced by CRLF the next time Git touches it
+ Backend/app.js                                    |   4 [32m+[m[31m-[m
+ Backend/socket.js                                 | 166 [32m++++++++++++[m[31m--------[m
+ Frontend/src/App.jsx                              |   2 [32m+[m
+ Frontend/src/components/CollaborativeCursor.jsx   | 110 [31m-------------[m
+ Frontend/src/components/NotificationSettings.jsx  |  59 [32m+[m[31m------[m
+ Frontend/src/components/SelectionHighlight.jsx    | 112 [31m-------------[m
+ Frontend/src/hooks/useCursorTracking.js           | 142 [31m-----------------[m
+ Frontend/src/pages/EditNote/EditNote.jsx          | 182 [32m++++++++++++++++[m[31m------[m
+ Frontend/src/redux/slices/userPreferencesSlice.js |   5 [32m+[m[31m-[m
+ 9 files changed, 253 insertions(+), 529 deletions(-)

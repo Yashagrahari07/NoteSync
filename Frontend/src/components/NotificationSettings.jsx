@@ -115,67 +115,18 @@ const NotificationSettings = ({ isOpen, onClose }) => {
                 </label>
               </div>
 
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Cursor Move Notifications</p>
-                  <p className="text-xs text-gray-500">Show when others move their cursors</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localNotifications.cursorMoves}
-                    onChange={(e) => handleNotificationChange('cursorMoves', e.target.checked)}
-                    className="sr-only peer"
-                    disabled={loading}
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
+
             </div>
           </div>
 
           {/* Real-time Settings */}
           <div className="mb-6">
-                         <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-               <MousePointer size={18} />
-               Real-time Features
-             </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+              <Users size={18} />
+              Real-time Features
+            </h3>
             
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Show Cursors</p>
-                  <p className="text-xs text-gray-500">Display other users' cursor positions</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localRealTime.showCursors}
-                    onChange={(e) => handleRealTimeChange('showCursors', e.target.checked)}
-                    className="sr-only peer"
-                    disabled={loading}
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Show Selections</p>
-                  <p className="text-xs text-gray-500">Display other users' text selections</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={localRealTime.showSelections}
-                    onChange={(e) => handleRealTimeChange('showSelections', e.target.checked)}
-                    className="sr-only peer"
-                    disabled={loading}
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-700">Show Presence</p>

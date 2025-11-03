@@ -77,12 +77,9 @@ const userPreferencesSlice = createSlice({
     notifications: {
       joinLeave: true,
       collaboratorChanges: true,
-      liveEdits: false,
-      cursorMoves: false
+      liveEdits: false
     },
     realTime: {
-      showCursors: true,
-      showSelections: true,
       showPresence: true
     },
     loading: false,

@@ -9,6 +9,7 @@ export const useOperationalTransformation = (noteId, socketRef) => {
   const [conflicts, setConflicts] = useState([]);
   const [isResolving, setIsResolving] = useState(false);
   const lastContentRef = useRef('');
+  const isProcessingRef = useRef(false); // Prevent concurrent operation processing
   
   /**
    * Initialize lastContentRef with initial content
@@ -140,6 +141,10 @@ export const useOperationalTransformation = (noteId, socketRef) => {
    */
   const handleContentChange = useCallback((oldContent, newContent, userId) => {
     if (oldContent === newContent) return;
+    
+    // Prevent concurrent processing
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
 
     const newOperations = createOperationsFromChange(oldContent, newContent, userId);
     
@@ -149,6 +154,11 @@ export const useOperationalTransformation = (noteId, socketRef) => {
     });
 
     lastContentRef.current = newContent;
+    
+    // Reset processing flag after a short delay
+    setTimeout(() => {
+      isProcessingRef.current = false;
+    }, 100);
   }, [createOperationsFromChange, sendOperation]);
 
   /**

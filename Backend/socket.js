@@ -47,22 +47,29 @@ module.exports.setupSocket = (server) => {
           activeUsers[noteId] = [];
         }
 
-        // Check if user is already in the room
+        // Check if user is already in the room (by socketId or userId)
+        // First, remove any stale entries with same socketId (reconnection)
+        activeUsers[noteId] = activeUsers[noteId].filter(
+          activeUser => activeUser.socketId !== socket.id
+        );
+
+        // Check if user already exists with different socketId
         const existingUserIndex = activeUsers[noteId].findIndex(
-          activeUser => activeUser.userId === socket.userId
+          activeUser => activeUser.userId.toString() === socket.userId.toString()
         );
 
         if (existingUserIndex !== -1) {
-          // User is already in the room - do nothing
-          return;
+          // Update existing user's socketId (user reconnected)
+          activeUsers[noteId][existingUserIndex].socketId = socket.id;
+          // Still emit the event to update frontend
+        } else {
+          // Add new user to the room
+          activeUsers[noteId].push({
+            fullname: user.fullname,
+            socketId: socket.id,
+            userId: socket.userId
+          });
         }
-
-        // Add new user to the room
-        activeUsers[noteId].push({
-          fullname: user.fullname,
-          socketId: socket.id,
-          userId: socket.userId
-        });
 
         // Get user preferences for notification settings
         const preferences = await UserPreferencesService.getUserPreferences(socket.userId);

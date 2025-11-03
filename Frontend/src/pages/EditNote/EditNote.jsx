@@ -73,6 +73,22 @@ export default function EditNote() {
     clearConflicts
   } = useOperationalTransformation(noteId, socketRef);
 
+  // Use refs for handlers to avoid stale closures in socket listeners
+  const initializeContentRef = useRef(initializeContent);
+  const handleRemoteOperationRef = useRef(handleRemoteOperation);
+  const handleConflictResolutionRef = useRef(handleConflictResolution);
+  const showInfoRef = useRef(showInfo);
+  const showSuccessRef = useRef(showSuccess);
+
+  // Update refs when handlers change
+  useEffect(() => {
+    initializeContentRef.current = initializeContent;
+    handleRemoteOperationRef.current = handleRemoteOperation;
+    handleConflictResolutionRef.current = handleConflictResolution;
+    showInfoRef.current = showInfo;
+    showSuccessRef.current = showSuccess;
+  }, [initializeContent, handleRemoteOperation, handleConflictResolution, showInfo, showSuccess]);
+
   // Socket event handlers - defined at top level to follow Rules of Hooks
   const handleUserJoined = useCallback((data) => {
     setActiveUsers(data.activeUsers.map((user) => user.fullname));
@@ -132,13 +148,11 @@ export default function EditNote() {
     const currentUserId = payload._id || payload.id;
     currentUserIdRef.current = currentUserId;
 
-    // Only create socket if it doesn't exist or if the noteId changed
-    if (socketRef.current && socketRef.current.connected) {
-      return;
-    }
-    
+    // Clean up existing socket and listeners if noteId changed
     if (socketRef.current) {
+      socketRef.current.removeAllListeners();
       socketRef.current.disconnect();
+      socketRef.current = null;
     }
 
     const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -148,8 +162,13 @@ export default function EditNote() {
       timeout: 5000,
     });
 
+    let hasJoined = false; // Prevent multiple joinNote calls
+
     socketRef.current.on("connect", () => {
-      socketRef.current.emit("joinNote", noteId);
+      if (!hasJoined) {
+        socketRef.current.emit("joinNote", noteId);
+        hasJoined = true;
+      }
     });
 
     socketRef.current.on("disconnect", () => {
@@ -167,7 +186,7 @@ export default function EditNote() {
     socketRef.current.on("noteData", (note) => {
       setTitle(note.title);
       setContent(note.content);
-      initializeContent(note.content);
+      initializeContentRef.current(note.content);
       setTags(note.tags.join(", "));
       setCreatedOn(new Date(note.createdOn).toISOString().slice(0, 10));
       setUpdatedOn(new Date(note.updatedOn).toISOString().slice(0, 10));
@@ -229,7 +248,7 @@ export default function EditNote() {
     });
 
     socketRef.current.on("notification", (data) => {
-      showInfo(data.message);
+      showInfoRef.current(data.message);
     });
 
     socketRef.current.on("collaboratorAdded", (data) => {
@@ -247,36 +266,36 @@ export default function EditNote() {
       // Update content if provided from server
       if (data.updatedContent !== undefined) {
         setContent(data.updatedContent);
-        initializeContent(data.updatedContent);
+        initializeContentRef.current(data.updatedContent);
         return;
       }
       
       // Handle remote operation if no server content provided
       if (data.operation && data.operation.userId !== currentUserIdRef.current) {
-        const result = handleRemoteOperation(data.operation);
+        const result = handleRemoteOperationRef.current(data.operation);
         if (result.success) {
           setContent(result.newContent);
-          initializeContent(result.newContent);
+          initializeContentRef.current(result.newContent);
         }
       }
     });
 
     socketRef.current.on("conflictResolved", (data) => {
-      handleConflictResolution(data.conflicts, data.resolution);
+      handleConflictResolutionRef.current(data.conflicts, data.resolution);
       setCurrentConflicts(data.conflicts);
       setIsResolvingConflicts(true);
-      showInfo("Conflicts detected and resolved automatically");
+      showInfoRef.current("Conflicts detected and resolved automatically");
     });
 
     socketRef.current.on("versionRestored", (data) => {
       setContent(data.note.content);
-      initializeContent(data.note.content);
+      initializeContentRef.current(data.note.content);
       setTitle(data.note.title);
-      showSuccess(`Note restored to version ${data.version}`);
+      showSuccessRef.current(`Note restored to version ${data.version}`);
     });
 
     socketRef.current.on("manualResolutionApplied", (data) => {
-      showInfo(`Manual conflict resolution applied by ${data.resolvedBy.fullname}`);
+      showInfoRef.current(`Manual conflict resolution applied by ${data.resolvedBy.fullname}`);
     });
 
     return () => {
@@ -284,9 +303,10 @@ export default function EditNote() {
         socketRef.current.emit("leaveNote", noteId);
         socketRef.current.removeAllListeners();
         socketRef.current.disconnect();
+        socketRef.current = null;
       }
     };
-  }, [noteId, initializeContent, handleRemoteOperation, handleConflictResolution, handleUserJoined, handleUserLeft, showInfo, showSuccess]);
+  }, [noteId]); // Only depend on noteId to prevent unnecessary re-registrations
 
 
 

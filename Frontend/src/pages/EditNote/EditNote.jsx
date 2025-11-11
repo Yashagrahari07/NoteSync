@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { Button } from "../../components/Button/Button";
 import { Input } from "../../components/Input/Input";
 import { Textarea } from "../../components/TeaxtArea/Textarea";
-import { Tag, Pin, Eye, EyeOff, ArrowLeft, Users, Copy, LogOut, Settings, History } from "lucide-react";
+import { Tag, Pin, Eye, EyeOff, ArrowLeft, Users, Copy, LogOut, Settings, History, Menu, X } from "lucide-react";
 import { io } from "socket.io-client";
 import { getNoteById, addCollaborator } from "../../services/noteService";
 import { useToastContext } from "../../components/Toast";
@@ -59,6 +59,27 @@ export default function EditNote() {
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const [currentConflicts, setCurrentConflicts] = useState([]);
   const [isResolvingConflicts, setIsResolvingConflicts] = useState(false);
+  
+  // Mobile sidebar state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [textareaRows, setTextareaRows] = useState(28);
+  
+  // Set textarea rows based on screen size
+  useEffect(() => {
+    const updateRows = () => {
+      if (window.innerWidth < 640) {
+        setTextareaRows(15);
+      } else if (window.innerWidth < 1024) {
+        setTextareaRows(20);
+      } else {
+        setTextareaRows(28);
+      }
+    };
+    
+    updateRows();
+    window.addEventListener('resize', updateRows);
+    return () => window.removeEventListener('resize', updateRows);
+  }, []);
 
   const navigate = useNavigate();
   const { noteId } = useParams();
@@ -509,50 +530,60 @@ export default function EditNote() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-40 shadow-sm">
-        <div className="px-4 lg:px-8 py-5">
-        <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
+      <div className="bg-white/90 backdrop-blur-xl border-b border-gray-200/60 sticky top-0 z-50 shadow-sm">
+        <div className="px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-5">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 md:gap-6 flex-1 min-w-0">
           <button
             onClick={() => navigate(-1)}
-                className="flex items-center gap-3 text-gray-700 hover:text-gray-900 transition-all duration-200 hover:bg-gray-100 px-3 py-2 rounded-lg group"
+                className="flex items-center gap-1 sm:gap-2 md:gap-3 text-gray-700 hover:text-gray-900 transition-all duration-200 hover:bg-gray-100 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg group flex-shrink-0"
           >
-                <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform duration-200" />
-                <span className="hidden sm:inline font-medium">Back to Dashboard</span>
+                <ArrowLeft size={18} className="sm:w-5 sm:h-5 group-hover:-translate-x-1 transition-transform duration-200" />
+                <span className="hidden sm:inline font-medium">Back</span>
+                <span className="hidden md:inline font-medium"> to Dashboard</span>
           </button>
 
-              <div className="h-8 w-px bg-gradient-to-b from-gray-300 to-gray-200"></div>
+              <div className="h-6 sm:h-8 w-px bg-gradient-to-b from-gray-300 to-gray-200 hidden sm:block"></div>
               
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                  <div className="absolute inset-0 w-3 h-3 bg-emerald-400 rounded-full animate-ping"></div>
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <div className="relative flex-shrink-0">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-0 w-2 h-2 sm:w-3 sm:h-3 bg-emerald-400 rounded-full animate-ping"></div>
                 </div>
-                <span className="text-sm font-medium text-gray-700">Live Collaboration</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-700 truncate">Live Collaboration</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors border border-gray-200"
+                aria-label="Toggle sidebar"
+              >
+                {isSidebarOpen ? <X size={18} /> : <Menu size={18} />}
+              </button>
+
               {/* Phase 1: Notification Settings Button */}
               <button
                 onClick={() => setShowNotificationSettings(true)}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
+                className="hidden sm:flex items-center gap-2 md:gap-3 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50"
               >
-                <Settings size={18} />
-                <span className="hidden sm:inline">Settings</span>
+                <Settings size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <span className="hidden md:inline">Settings</span>
               </button>
 
               {/* Live Preview Toggle */}
               <button
                 onClick={() => setIsLivePreview(!isLivePreview)}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                className={`hidden sm:flex items-center gap-2 md:gap-3 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
                   isLivePreview
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25'
                     : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                 }`}
               >
-                {isLivePreview ? <EyeOff size={18} /> : <Eye size={18} />}
-                <span className="hidden sm:inline">
+                {isLivePreview ? <EyeOff size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Eye size={16} className="sm:w-[18px] sm:h-[18px]" />}
+                <span className="hidden lg:inline">
                   {isLivePreview ? 'Hide Preview' : 'Live Preview'}
                 </span>
               </button>
@@ -560,14 +591,14 @@ export default function EditNote() {
               {/* Pin Button */}
           <button
             onClick={() => setIsPinned(!isPinned)}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                className={`flex items-center justify-center gap-1 sm:gap-2 md:gap-3 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
                   isPinned
                     ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/25'
                     : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-amber-300 hover:bg-amber-50'
                 }`}
               >
-                <Pin size={18} />
-                <span className="hidden sm:inline">
+                <Pin size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <span className="hidden md:inline">
                   {isPinned ? 'Pinned' : 'Pin'}
                 </span>
           </button>
@@ -577,35 +608,35 @@ export default function EditNote() {
       </div>
 
       {/* Main Content and Sidebar Container */}
-      <div className="flex">
+      <div className="flex relative lg:pt-0">
         {/* Main Content Area */}
-        <div className="flex-1 px-4 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="flex-1 px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8 min-w-0">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 md:gap-8">
             {/* Live Preview Section (Left) */}
             {isLivePreview && (
-              <div className="lg:col-span-5 space-y-6">
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 p-8 relative overflow-hidden">
+              <div className="lg:col-span-5 space-y-4 sm:space-y-6">
+                <div className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-xl border border-white/20 p-4 sm:p-6 md:p-8 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50"></div>
                   <div className="relative">
-                    <div className="flex items-center justify-between mb-6">
-                      <h3 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-800 flex items-center gap-2 sm:gap-3">
                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
                         Live Preview
                       </h3>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {currentEditor && (
-                          <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
-                            {currentEditor} editing...
+                          <div className="px-2 sm:px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
+                            <span className="hidden sm:inline">{currentEditor} </span>editing...
                           </div>
                         )}
-                        <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                        <div className="px-2 sm:px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
                           Active
                         </div>
                       </div>
                     </div>
                     
                     <div className="prose prose-sm max-w-none">
-                      <h1 className="text-2xl font-bold text-gray-800 mb-4 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                      <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
                         {title || 'Untitled Note'}
                       </h1>
                       
@@ -634,19 +665,19 @@ export default function EditNote() {
 
                       </div>
 
-                      <div className="mt-8 p-6 bg-gradient-to-br from-blue-100/80 to-indigo-100/80 rounded-2xl border border-blue-200/50 backdrop-blur-sm">
-                        <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
+                      <div className="mt-4 sm:mt-6 md:mt-8 p-4 sm:p-6 bg-gradient-to-br from-blue-100/80 to-indigo-100/80 rounded-xl sm:rounded-2xl border border-blue-200/50 backdrop-blur-sm">
+                        <h4 className="text-xs sm:text-sm font-bold text-gray-800 mb-2 sm:mb-3 flex items-center gap-2">
                           <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                           Quote of the Day
                         </h4>
-                        <blockquote className="text-gray-700 italic text-sm mb-2 leading-relaxed">
+                        <blockquote className="text-gray-700 italic text-xs sm:text-sm mb-2 leading-relaxed">
                           "{quote.text}"
                         </blockquote>
                         <cite className="text-xs text-gray-500 font-medium">— {quote.author}</cite>
                       </div>
 
                       {/* Real-time Collaboration Status */}
-                      <div className="mt-6 p-4 bg-gradient-to-br from-emerald-50/80 to-green-50/80 rounded-xl border border-emerald-200/50 backdrop-blur-sm">
+                      <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-gradient-to-br from-emerald-50/80 to-green-50/80 rounded-xl border border-emerald-200/50 backdrop-blur-sm">
                         <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
                           Live Collaboration
@@ -692,42 +723,42 @@ export default function EditNote() {
             )}
 
             {/* Editor Section */}
-            <div className={`${isLivePreview ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-6`}>
+            <div className={`${isLivePreview ? 'lg:col-span-7' : 'lg:col-span-12'} space-y-4 sm:space-y-6`}>
               {/* Title */}
-              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+              <div className="bg-white/90 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-white/30 p-4 sm:p-6 md:p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-50/60 to-gray-50/60 group-hover:from-slate-100/60 group-hover:to-gray-100/60 transition-all duration-300"></div>
                 <div className="relative">
-                                    <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
-                      <div className="w-5 h-5 bg-white rounded-lg flex items-center justify-center">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                                    <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-lg flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full"></div>
                       </div>
                     </div>
-                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Note Title</span>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Note Title</span>
                   </div>
                   <div className="w-full">
                     <Input
                       value={title}
                       onChange={handleTitleChange}
                       placeholder="Enter a compelling title for your note..."
-                      className="w-full text-3xl font-bold border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent leading-tight"
+                      className="w-full text-xl sm:text-2xl md:text-3xl font-bold border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent leading-tight caret-gray-800"
                     />
                   </div>
                   
-                  <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200/50">
-                    <div className="flex items-center gap-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200/50">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium text-gray-600">Created: {createdOn}</span>
+                        <span className="text-xs sm:text-sm font-medium text-gray-600">Created: {createdOn}</span>
                       </div>
-                      <div className="w-px h-4 bg-gray-300"></div>
+                      <div className="hidden sm:block w-px h-4 bg-gray-300"></div>
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium text-gray-600">Updated: {updatedOn}</span>
+                        <span className="text-xs sm:text-sm font-medium text-gray-600">Updated: {updatedOn}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                      <div className="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                         Auto-save enabled
                       </div>
                     </div>
@@ -736,34 +767,34 @@ export default function EditNote() {
         </div>
 
               {/* Tags */}
-              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+              <div className="bg-white/90 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-white/30 p-4 sm:p-6 md:p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50/60 to-indigo-50/60 group-hover:from-blue-100/60 group-hover:to-indigo-100/60 transition-all duration-300"></div>
                 <div className="relative">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl">
-                      <Tag className="text-white" size={20} />
+                  <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg sm:rounded-xl">
+                      <Tag className="text-white w-[18px] h-[18px] sm:w-5 sm:h-5" size={18} />
                     </div>
-                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Tags & Categories</span>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Tags & Categories</span>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
           <Input
             value={tags}
             onChange={handleTagsChange}
-                      placeholder="Add tags separated by commas (e.g., work, ideas, important)..."
-                      className="flex-1 border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 text-lg font-medium"
+                      placeholder="Add tags separated by commas..."
+                      className="flex-1 border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 text-base sm:text-lg font-medium"
                     />
                     <div className="flex-shrink-0">
-                      <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                      <div className="px-2 sm:px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
                         {tags.split(',').filter(tag => tag.trim()).length} tags
                       </div>
                     </div>
                   </div>
                   {tags && (
-                    <div className="flex flex-wrap gap-2 mt-4">
+                    <div className="flex flex-wrap gap-2 mt-3 sm:mt-4">
                       {tags.split(',').filter(tag => tag.trim()).map((tag, index) => (
                         <span
                           key={index}
-                          className="px-3 py-1.5 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-sm font-medium border border-purple-200"
+                          className="px-2 sm:px-3 py-1 sm:py-1.5 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 rounded-full text-xs sm:text-sm font-medium border border-purple-200"
                         >
                           {tag.trim()}
                         </span>
@@ -774,28 +805,28 @@ export default function EditNote() {
               </div>
 
               {/* Content Editor */}
-              <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/30 p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
+              <div className="bg-white/90 backdrop-blur-xl rounded-xl sm:rounded-2xl shadow-2xl border border-white/30 p-4 sm:p-6 md:p-8 relative overflow-hidden group hover:shadow-3xl transition-all duration-300">
                 <div className="absolute inset-0 bg-gradient-to-br from-slate-50/60 to-gray-50/60 group-hover:from-slate-100/60 group-hover:to-gray-100/60 transition-all duration-300"></div>
                 <div className="relative">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl">
-                        <div className="w-5 h-5 bg-white rounded-lg flex items-center justify-center">
-                          <div className="w-2 h-2 bg-emerald-600 rounded-full"></div>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <div className="p-1.5 sm:p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg sm:rounded-xl">
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-lg flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-emerald-600 rounded-full"></div>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Note Content</span>
+                      <span className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Note Content</span>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                       {currentEditor && (
-                        <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
-                          {currentEditor} editing
+                        <div className="px-2 sm:px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
+                          <span className="hidden sm:inline">{currentEditor} </span>editing
                         </div>
                       )}
-                      <div className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
-                        {content.length} characters
+                      <div className="px-2 sm:px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">
+                        {content.length} chars
                       </div>
-                      <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                      <div className="px-2 sm:px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                         {content.split('\n').length} lines
                       </div>
                     </div>
@@ -806,7 +837,7 @@ export default function EditNote() {
           ref={textareaRef}
           value={content}
           onChange={handleContentChange}
-                      rows={28}
+                      rows={textareaRows}
                       placeholder="Start writing your note here... 
 
 💡 Tips:
@@ -814,37 +845,39 @@ export default function EditNote() {
 • Break content into paragraphs
 • Add bullet points for lists
 • Include relevant details"
-                      className="resize-none w-full border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 text-gray-800 leading-relaxed text-lg font-medium"
+                      className="resize-none w-full border-none bg-transparent focus:ring-0 p-0 placeholder-gray-400 text-gray-800 leading-relaxed text-base sm:text-lg font-medium"
                     />
                     
                     {/* Phase 1: Collaborative Cursors and Selections - REMOVED FROM MAIN CONTENT */}
                     {/* Cursors and selections will only appear in Live Preview section */}
                     
                     {/* Editor Footer */}
-                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200/50">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-200/50">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
                           <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                          <span>Real-time collaboration</span>
+                          <span className="hidden sm:inline">Real-time collaboration</span>
+                          <span className="sm:hidden">Live</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
                           <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                          <span>Auto-save active</span>
+                          <span className="hidden sm:inline">Auto-save active</span>
+                          <span className="sm:hidden">Auto-save</span>
                         </div>
                         {activeUsers.length > 0 && (
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500">
                             <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                            <span>{activeUsers.length} active user{activeUsers.length !== 1 ? 's' : ''}</span>
+                            <span>{activeUsers.length} user{activeUsers.length !== 1 ? 's' : ''}</span>
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {liveEditStatus && (
-                          <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
+                          <div className="px-2 sm:px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold animate-pulse">
                             {liveEditStatus}
                           </div>
                         )}
-                        <div className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
+                        <div className="px-2 sm:px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold">
                           {new Date().toLocaleTimeString()}
                         </div>
                       </div>
@@ -854,23 +887,23 @@ export default function EditNote() {
               </div>
 
               {/* Quote Section */}
-              <div className="bg-gradient-to-br from-blue-100/90 to-indigo-100/90 rounded-2xl border border-blue-200/60 p-8 backdrop-blur-xl relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
+              <div className="bg-gradient-to-br from-blue-100/90 to-indigo-100/90 rounded-xl sm:rounded-2xl border border-blue-200/60 p-4 sm:p-6 md:p-8 backdrop-blur-xl relative overflow-hidden group hover:shadow-2xl transition-all duration-300">
                 <div className="absolute inset-0 bg-gradient-to-br from-blue-50/40 to-indigo-50/40 group-hover:from-blue-100/40 group-hover:to-indigo-100/40 transition-all duration-300"></div>
                 <div className="relative">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
-                      <div className="w-5 h-5 bg-white rounded-lg flex items-center justify-center">
-                        <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="p-1.5 sm:p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg sm:rounded-xl">
+                      <div className="w-4 h-4 sm:w-5 sm:h-5 bg-white rounded-lg flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-600 rounded-full"></div>
                       </div>
                     </div>
-                    <span className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Daily Inspiration</span>
+                    <span className="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide">Daily Inspiration</span>
                   </div>
                   
-                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-6 border border-white/30">
-                    <blockquote className="text-gray-700 italic text-lg mb-4 leading-relaxed">
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4 sm:p-6 border border-white/30">
+                    <blockquote className="text-gray-700 italic text-sm sm:text-base md:text-lg mb-3 sm:mb-4 leading-relaxed">
                       "{quote.text || 'Loading inspiration...'}"
                     </blockquote>
-                    <cite className="text-sm text-gray-500 font-medium">— {quote.author || 'Unknown'}</cite>
+                    <cite className="text-xs sm:text-sm text-gray-500 font-medium">— {quote.author || 'Unknown'}</cite>
                   </div>
                 </div>
               </div>
@@ -878,19 +911,57 @@ export default function EditNote() {
           </div>
         </div>
 
+        {/* Sidebar - Hidden on mobile/tablet, drawer on lg+ */}
+        {/* Mobile/Tablet Overlay */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+        
         {/* Sidebar */}
-        <div className="w-80 bg-white/90 backdrop-blur-xl border-l border-gray-200/60 p-6 space-y-6">
+        <div className={`
+          fixed lg:sticky
+          top-0 
+          lg:top-20
+          right-0 
+          bottom-0 lg:bottom-auto
+          z-40 lg:z-30
+          w-80 max-w-[85vw] lg:max-w-none
+          bg-white/95 lg:bg-white/90 backdrop-blur-xl
+          border-l border-gray-200/60
+          p-4 sm:p-6 space-y-4 sm:space-y-6
+          transform transition-transform duration-300 ease-in-out
+          overflow-y-auto overflow-x-hidden
+          lg:overflow-y-auto lg:overflow-x-hidden lg:h-[calc(100vh-5rem)]
+          lg:self-start
+          min-w-0
+          ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}
+        `}>
+          {/* Close button for mobile */}
+          <div className="flex items-center justify-between mb-2 lg:hidden">
+            <h2 className="text-lg font-bold text-gray-800">Note Details</h2>
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label="Close sidebar"
+            >
+              <X size={20} />
+            </button>
+          </div>
+
           {/* Collaboration Section */}
-          <div className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 rounded-2xl border border-emerald-200/50 p-6 backdrop-blur-sm">
-            <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-3">
-              <Users size={20} className="text-emerald-600" />
+          <div className="bg-gradient-to-br from-emerald-50/80 to-green-50/80 rounded-xl sm:rounded-2xl border border-emerald-200/50 p-4 sm:p-6 backdrop-blur-sm">
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3">
+              <Users size={18} className="sm:w-5 sm:h-5 text-emerald-600" />
               Collaboration
             </h3>
             
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {/* Active Users */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Active Users</h4>
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Active Users</h4>
                 <div className="space-y-2">
                   {activeUsers.length > 0 ? (
                     activeUsers.map((user, index) => (
@@ -907,14 +978,14 @@ export default function EditNote() {
 
               {/* Room ID */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Room ID</h4>
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Room ID</h4>
                 <div className="flex items-center gap-2">
-                  <div className="flex-1 p-2 bg-white/60 rounded-lg border border-white/30 text-sm font-mono text-gray-700 truncate">
+                  <div className="flex-1 p-2 bg-white/60 rounded-lg border border-white/30 text-xs sm:text-sm font-mono text-gray-700 truncate">
                     {roomId}
                   </div>
                   <button
                     onClick={handleCopyRoomId}
-                    className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                    className="p-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors flex-shrink-0"
                   >
                     <Copy size={16} />
                   </button>
@@ -923,17 +994,17 @@ export default function EditNote() {
 
               {/* Add Collaborator */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Add Collaborator</h4>
-                <div className="flex items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Add Collaborator</h4>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 min-w-0">
                   <Input
                     value={collaboratorEmail}
                     onChange={(e) => setCollaboratorEmail(e.target.value)}
                     placeholder="Enter email..."
-                    className="flex-1 text-sm"
+                    className="flex-1 min-w-0 text-xs sm:text-sm"
                   />
                   <Button
                     onClick={handleAddCollaborator}
-                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors"
+                    className="flex-shrink-0 px-3 sm:px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors text-xs sm:text-sm whitespace-nowrap"
                   >
                     Add
                   </Button>
@@ -942,7 +1013,7 @@ export default function EditNote() {
 
               {/* Collaborators List */}
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Collaborators</h4>
+                <h4 className="text-xs sm:text-sm font-semibold text-gray-700 mb-2">Collaborators</h4>
                 <div className="space-y-2">
                   {collaborators.length > 0 ? (
                     collaborators.map((collaborator, index) => (
@@ -963,65 +1034,67 @@ export default function EditNote() {
           </div>
 
           {/* Note Info Section */}
-          <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 rounded-2xl border border-blue-200/50 p-6 backdrop-blur-sm">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Note Info</h3>
+          <div className="bg-gradient-to-br from-blue-50/80 to-indigo-50/80 rounded-xl sm:rounded-2xl border border-blue-200/50 p-4 sm:p-6 backdrop-blur-sm">
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Note Info</h3>
             
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Owner:</span>
-                <span className="text-sm text-gray-700">{owner}</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-600">Owner:</span>
+                <span className="text-xs sm:text-sm text-gray-700 truncate ml-2">{owner}</span>
               </div>
               
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Created:</span>
-                <span className="text-sm text-gray-700">{createdOn}</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-600">Created:</span>
+                <span className="text-xs sm:text-sm text-gray-700">{createdOn}</span>
               </div>
               
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Updated:</span>
-                <span className="text-sm text-gray-700">{updatedOn}</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-600">Updated:</span>
+                <span className="text-xs sm:text-sm text-gray-700">{updatedOn}</span>
               </div>
               
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Status:</span>
-                <span className="text-sm text-emerald-600 font-semibold">Active</span>
+                <span className="text-xs sm:text-sm font-medium text-gray-600">Status:</span>
+                <span className="text-xs sm:text-sm text-emerald-600 font-semibold">Active</span>
               </div>
             </div>
           </div>
 
           {/* Actions Section */}
-          <div className="bg-gradient-to-br from-gray-50/80 to-slate-50/80 rounded-2xl border border-gray-200/50 p-6 backdrop-blur-sm">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Actions</h3>
+          <div className="bg-gradient-to-br from-gray-50/80 to-slate-50/80 rounded-xl sm:rounded-2xl border border-gray-200/50 p-4 sm:p-6 backdrop-blur-sm">
+            <h3 className="text-base sm:text-lg font-bold text-gray-800 mb-3 sm:mb-4">Actions</h3>
             
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {/* Phase 2: Conflict Indicator */}
               <ConflictIndicator
                 hasConflicts={conflicts.length > 0}
                 isResolving={isResolving}
                 conflictCount={conflicts.length}
-                onResolve={() => setShowConflictResolution(true)}
+                onResolve={() => {
+                  setShowConflictResolution(true);
+                  setIsSidebarOpen(false);
+                }}
                 className="w-full"
               />
 
               {/* Phase 2: Version History Button */}
               <Button
-                onClick={() => setShowVersionHistory(true)}
-                className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                onClick={() => {
+                  setShowVersionHistory(true);
+                  setIsSidebarOpen(false);
+                }}
+                className="w-full flex items-center justify-center gap-2 bg-blue-500 text-white hover:bg-blue-600 transition-colors text-xs sm:text-sm py-2 sm:py-2.5"
               >
                 <History size={16} />
-                Version History
+                <span>Version History</span>
               </Button>
-
-
-
-
 
               <Button
                 onClick={handleLeave}
-                className="w-full flex items-center justify-center gap-2 bg-red-500 text-white hover:bg-red-600 transition-colors"
+                className="w-full flex items-center justify-center gap-2 bg-red-500 text-white hover:bg-red-600 transition-colors text-xs sm:text-sm py-2 sm:py-2.5"
               >
                 <LogOut size={16} />
-                Leave Note
+                <span>Leave Note</span>
               </Button>
             </div>
           </div>

@@ -14,9 +14,11 @@ class NotificationService {
   static async getUserNotifications(userId, limit = 50, skip = 0) {
     try {
       const notifications = await NotificationModel.find({ userId })
+        .select('type title message noteId noteTitle noteOwner isRead createdAt')
         .sort({ createdAt: -1 })
         .limit(limit)
-        .skip(skip);
+        .skip(skip)
+        .lean();
       
       const unreadCount = await NotificationModel.countDocuments({ 
         userId, 
@@ -35,7 +37,9 @@ class NotificationService {
         { _id: notificationId, userId },
         { isRead: true },
         { new: true }
-      );
+      )
+        .select('type title message noteId noteTitle noteOwner isRead createdAt')
+        .lean();
       return notification;
     } catch (error) {
       throw new Error('Error marking notification as read');

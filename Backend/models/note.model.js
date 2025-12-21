@@ -82,4 +82,10 @@ noteSchema.pre("save", function (next) {
   next();
 });
 
+// Indexes for efficient querying
+noteSchema.index({ userId: 1, updatedOn: -1 });
+noteSchema.index({ 'collaborators.userId': 1 });
+noteSchema.index({ tags: 1 });
+noteSchema.index({ isPinned: 1, updatedOn: -1 });
+
 module.exports = mongoose.model("note", noteSchema);

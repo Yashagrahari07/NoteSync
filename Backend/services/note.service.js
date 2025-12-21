@@ -34,8 +34,17 @@ exports.createNote = async (data, userId) => {
   }
 };
 
-exports.getAllNotes = async (userId) => {
-  return await Note.find({ $or: [{ userId }, { "collaborators.userId": userId }] }).sort({ updatedOn: -1 });
+exports.getAllNotes = async (userId, options = {}) => {
+  const { page = 1, limit = 20, sortBy = 'updatedOn', sortOrder = -1 } = options;
+  
+  return await Note.find({ 
+    $or: [{ userId }, { "collaborators.userId": userId }] 
+  })
+    .select('title content tags isPinned updatedOn owner collaborators')
+    .sort({ [sortBy]: sortOrder })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
 };
 
 exports.getNoteById = async (id, userId) => {
@@ -43,7 +52,10 @@ exports.getNoteById = async (id, userId) => {
     const note = await Note.findOne({
       _id: id,
       $or: [{ userId }, { "collaborators.userId": userId }],
-    });
+    })
+      .populate('userId', 'fullname email')
+      .populate('collaborators.userId', 'fullname email')
+      .lean();
 
     if (!note) {
       return null;
@@ -61,7 +73,9 @@ exports.updateNote = async (id, data, userId) => {
     { _id: id, $or: [{ userId }, { "collaborators.userId": userId }] },
     { ...data, updatedOn: Date.now() },
     { new: true }
-  );
+  )
+    .select('title content tags isPinned updatedOn owner collaborators')
+    .lean();
 };
 
 exports.deleteNote = async (id, userId) => {
@@ -187,5 +201,5 @@ exports.togglePinNote = async (noteId, userId) => {
   note.isPinned = !note.isPinned;
   await note.save();
 
-  return note;
+  return note.toObject();
 };

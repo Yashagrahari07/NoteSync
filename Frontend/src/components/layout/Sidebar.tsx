@@ -1,11 +1,16 @@
+import { memo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '@/stores/ui.store';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { X, FileText, Star, Users } from 'lucide-react';
 
-export function Sidebar() {
+function SidebarComponent() {
   const { sidebarOpen, toggleSidebar } = useUIStore();
+
+  const handleToggle = useCallback(() => {
+    toggleSidebar();
+  }, [toggleSidebar]);
 
   return (
     <AnimatePresence>
@@ -19,7 +24,7 @@ export function Sidebar() {
         >
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="font-semibold text-sm">Workspace</h2>
-            <Button variant="ghost" size="sm" onClick={toggleSidebar}>
+            <Button variant="ghost" size="sm" onClick={handleToggle}>
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -44,4 +49,6 @@ export function Sidebar() {
     </AnimatePresence>
   );
 }
+
+export const Sidebar = memo(SidebarComponent);
 

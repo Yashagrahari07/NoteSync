@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -13,8 +14,13 @@ interface RichTextEditorProps {
   noteId: string;
 }
 
-export function RichTextEditor({ content, onChange, noteId }: RichTextEditorProps) {
+function RichTextEditorComponent({ content, onChange, noteId }: RichTextEditorProps) {
   const { emitOptimized } = useSocket(noteId);
+
+  const handleUpdate = useCallback((html: string) => {
+    onChange(html);
+    emitOptimized('editNote', { noteId, content: html }, 500);
+  }, [onChange, emitOptimized, noteId]);
 
   const editor = useEditor({
     extensions: [
@@ -50,11 +56,7 @@ export function RichTextEditor({ content, onChange, noteId }: RichTextEditorProp
     },
   });
 
-  const debouncedUpdate = useDebouncedCallback((html: string) => {
-    onChange(html);
-    // Emit to socket for real-time collaboration
-    emitOptimized('editNote', { noteId, content: html }, 500);
-  }, 500);
+  const debouncedUpdate = useDebouncedCallback(handleUpdate, 500);
 
   if (!editor) {
     return null;
@@ -68,3 +70,4 @@ export function RichTextEditor({ content, onChange, noteId }: RichTextEditorProp
   );
 }
 
+export const RichTextEditor = memo(RichTextEditorComponent);

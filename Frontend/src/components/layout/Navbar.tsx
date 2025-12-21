@@ -1,3 +1,4 @@
+import { memo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -11,13 +12,13 @@ import { Search, Plus, Settings, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth.store';
 import { useLogout } from '@/hooks/api/useAuth';
 
-export function Navbar() {
+function NavbarComponent() {
   const { user, clearAuth } = useAuthStore();
   const logoutMutation = useLogout();
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logoutMutation.mutate();
-  };
+  }, [logoutMutation]);
 
   return (
     <motion.nav
@@ -66,4 +67,6 @@ export function Navbar() {
     </motion.nav>
   );
 }
+
+export const Navbar = memo(NavbarComponent);
 

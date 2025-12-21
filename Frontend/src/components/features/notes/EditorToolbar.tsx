@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Editor } from '@tiptap/react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -22,7 +23,7 @@ interface EditorToolbarProps {
   editor: Editor | null;
 }
 
-export function EditorToolbar({ editor }: EditorToolbarProps) {
+function EditorToolbarComponent({ editor }: EditorToolbarProps) {
   if (!editor) return null;
 
   return (
@@ -156,3 +157,4 @@ export function EditorToolbar({ editor }: EditorToolbarProps) {
   );
 }
 
+export const EditorToolbar = memo(EditorToolbarComponent);

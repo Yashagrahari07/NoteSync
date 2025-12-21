@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,21 +27,23 @@ interface NoteCardProps {
   viewMode?: 'grid' | 'list';
 }
 
-export function NoteCard({ note, onEdit, onDelete, onPin, viewMode = 'grid' }: NoteCardProps) {
+function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }: NoteCardProps) {
   const isOwned = note.userId === note.owner.userId;
 
-  const formatDate = (dateString: string) => {
+  const formattedDate = useMemo(() => {
     try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
+      return formatDistanceToNow(new Date(note.updatedOn), { addSuffix: true });
     } catch {
-      return new Date(dateString).toLocaleDateString();
+      return new Date(note.updatedOn).toLocaleDateString();
     }
-  };
+  }, [note.updatedOn]);
 
-  const truncateText = (text: string, maxLength: number) => {
+  const truncatedContent = useMemo(() => {
+    const text = note.content.replace(/<[^>]*>/g, '');
+    const maxLength = viewMode === 'list' ? 150 : 120;
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
-  };
+  }, [note.content, viewMode]);
 
   if (viewMode === 'list') {
     return (
@@ -78,7 +81,7 @@ export function NoteCard({ note, onEdit, onDelete, onPin, viewMode = 'grid' }: N
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
                   <div className="flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    <span>{formatDate(note.updatedOn)}</span>
+                    <span>{formattedDate}</span>
                   </div>
                   {note.tags && note.tags.length > 0 && (
                     <div className="flex items-center gap-1">
@@ -89,7 +92,7 @@ export function NoteCard({ note, onEdit, onDelete, onPin, viewMode = 'grid' }: N
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground line-clamp-2">
-                  {truncateText(note.content.replace(/<[^>]*>/g, ''), 150)}
+                  {truncatedContent}
                 </p>
               </div>
               <div className="flex items-center gap-1">
@@ -186,11 +189,11 @@ export function NoteCard({ note, onEdit, onDelete, onPin, viewMode = 'grid' }: N
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
             <Clock className="h-3 w-3" />
-            <span>{formatDate(note.updatedOn)}</span>
+            <span>{formattedDate}</span>
           </div>
 
           <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
-            {truncateText(note.content.replace(/<[^>]*>/g, ''), 120)}
+            {truncatedContent}
           </p>
 
           {note.tags && note.tags.length > 0 && (
@@ -218,3 +221,4 @@ export function NoteCard({ note, onEdit, onDelete, onPin, viewMode = 'grid' }: N
   );
 }
 
+export const NoteCard = memo(NoteCardComponent);

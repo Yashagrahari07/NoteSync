@@ -12,98 +12,69 @@ class ConflictResolutionService {
    */
   static async processOperation(operation, noteId) {
     try {
-      // Get the current note content
       const note = await NoteModel.findById(noteId);
       if (!note) {
-        throw new Error('Note not found');
+        return { success: false, message: 'Note not found' };
       }
 
       // Get pending operations for this note
-      const pendingOperations = await OperationModel.find({
+      const pendingOps = await OperationModel.find({
         noteId,
-        applied: false
-      }).sort({ timestamp: 1 });
+        applied: false,
+      }).sort({ timestamp: 1 }).lean();
 
-      // Check for conflicts with existing operations
-      const conflicts = [];
-      const transformedOperations = [];
-      let currentOperation = { ...operation };
+      // Transform operation against all pending operations
+      const transformedOp = OperationalTransformation.transformAgainstOperations(
+        operation,
+        pendingOps
+      );
 
-      for (const pendingOp of pendingOperations) {
-        try {
-          // Try to transform the operations
-          const [transformedNewOp, transformedPendingOp] = 
-            OperationalTransformation.transform(currentOperation, pendingOp);
-          
-          transformedOperations.push({
-            original: pendingOp,
-            transformed: transformedPendingOp
-          });
-          
-          currentOperation = transformedNewOp;
-        } catch (error) {
-          if (error.message.startsWith('CONFLICT')) {
-            conflicts.push({
-              id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              operation1: currentOperation,
-              operation2: pendingOp,
-              type: error.message
-            });
-          } else {
-            throw error;
-          }
-        }
-      }
-
-      // If conflicts exist, resolve them
-      if (conflicts.length > 0) {
-        const resolution = await this.resolveConflicts(conflicts, noteId);
+      if (!transformedOp) {
         return {
-          success: true,
-          conflicts: conflicts,
-          resolution: resolution,
-          transformedOperation: currentOperation
+          success: false,
+          message: 'Operation resulted in no-op',
         };
       }
 
-      // Apply transformed operations to note content
+      // Get current note content
       let updatedContent = note.content;
-      for (const { original, transformed } of transformedOperations) {
-        updatedContent = OperationalTransformation.applyOperation(updatedContent, transformed);
-        
-        // Mark original operation as applied
-        await OperationModel.findByIdAndUpdate(original._id, {
-          applied: true
-        });
+
+      // Apply all pending operations first
+      for (const pendingOp of pendingOps) {
+        if (pendingOp.type !== 'noop') {
+          updatedContent = OperationalTransformation.applyOperation(updatedContent, pendingOp);
+        }
+        await OperationModel.findByIdAndUpdate(pendingOp._id, { applied: true });
       }
 
-      // Apply the final transformed operation
-      updatedContent = OperationalTransformation.applyOperation(updatedContent, currentOperation);
-      
-      // Update note content
+      // Apply transformed operation
+      updatedContent = OperationalTransformation.applyOperation(updatedContent, transformedOp);
+
+      // Update note
       await NoteModel.findByIdAndUpdate(noteId, {
         content: updatedContent,
-        updatedOn: new Date()
+        updatedOn: Date.now()
       });
 
-      // Save the new operation
-      const newOperation = new OperationModel({
-        ...currentOperation,
+      // Save operation
+      const savedOp = await OperationModel.create({
+        ...transformedOp,
         noteId,
-        applied: true
+        applied: true,
       });
-      await newOperation.save();
 
       return {
         success: true,
-        conflicts: [],
-        transformedOperation: currentOperation,
-        updatedContent
+        transformedOperation: savedOp,
+        updatedContent: updatedContent,
       };
-
     } catch (error) {
       console.error('Error processing operation:', error);
-      throw error;
+      return {
+        success: false,
+        message: 'Failed to process operation',
+        error: error.message,
+      };
     }
   }
 
@@ -122,16 +93,17 @@ class ConflictResolutionService {
         conflict.operation2
       );
 
-      // Mark losing operation as resolved
       const losingOperation = winningOperation === conflict.operation1 
         ? conflict.operation2 
         : conflict.operation1;
 
-      await OperationModel.findByIdAndUpdate(losingOperation._id, {
-        conflictResolved: true,
-        resolvedBy: winningOperation.userId,
-        resolvedAt: new Date()
-      });
+      if (losingOperation._id) {
+        await OperationModel.findByIdAndUpdate(losingOperation._id, {
+          conflictResolved: true,
+          resolvedBy: winningOperation.userId,
+          resolvedAt: new Date()
+        });
+      }
 
       resolutions.push({
         conflict,
@@ -141,8 +113,9 @@ class ConflictResolutionService {
       });
     }
 
-    // Create version snapshot for conflict resolution
-    await this.createConflictVersion(noteId, conflicts, resolutions);
+    if (conflicts.length > 0) {
+      await this.createConflictVersion(noteId, conflicts, resolutions);
+    }
 
     return {
       type: 'last-write-wins',
@@ -241,10 +214,10 @@ class ConflictResolutionService {
    */
   static async getVersionHistory(noteId, limit = 10) {
     return await NoteVersionModel.find({ noteId })
+      .select('version content title createdBy createdByFullname createdAt conflictResolved')
       .sort({ version: -1 })
       .limit(limit)
-      .populate('createdBy', 'fullname')
-      .populate('resolvedBy', 'fullname');
+      .lean();
   }
 
   /**
@@ -255,8 +228,8 @@ class ConflictResolutionService {
    */
   static async getVersion(noteId, version) {
     return await NoteVersionModel.findOne({ noteId, version })
-      .populate('createdBy', 'fullname')
-      .populate('resolvedBy', 'fullname');
+      .select('version content title createdBy createdByFullname createdAt conflictResolved')
+      .lean();
   }
 
   /**
@@ -319,7 +292,10 @@ class ConflictResolutionService {
     return await OperationModel.find({
       noteId,
       applied: false
-    }).sort({ timestamp: 1 });
+    })
+      .select('type position content userId userFullname timestamp version')
+      .sort({ timestamp: 1 })
+      .lean();
   }
 
   /**

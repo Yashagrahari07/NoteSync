@@ -87,15 +87,18 @@ class OperationalTransformation {
         { ...op1, position: insertPos },
         { ...op2, position: deletePos + insertLen }
       ];
-    } else if (insertPos >= deletePos + deleteLen) {
+    } else if (insertPos > deletePos + deleteLen) {
       // Insert after delete range
       return [
         { ...op1, position: insertPos - deleteLen },
         { ...op2, position: deletePos }
       ];
     } else {
-      // Insert within delete range - this is a conflict
-      throw new Error('CONFLICT: Insert position within delete range');
+      // Insert within delete range - shift insert to delete position
+      return [
+        { ...op1, position: deletePos },
+        { ...op2, position: deletePos }
+      ];
     }
   }
 
@@ -115,15 +118,18 @@ class OperationalTransformation {
         { ...op1, position: deletePos + insertLen },
         { ...op2, position: insertPos }
       ];
-    } else if (insertPos >= deletePos + deleteLen) {
+    } else if (insertPos > deletePos + deleteLen) {
       // Insert after delete range
       return [
         { ...op1, position: deletePos },
         { ...op2, position: insertPos - deleteLen }
       ];
     } else {
-      // Insert within delete range - this is a conflict
-      throw new Error('CONFLICT: Insert position within delete range');
+      // Insert within delete range - adjust delete to exclude insert position
+      return [
+        { ...op1, position: deletePos, content: op1.content },
+        { ...op2, position: deletePos }
+      ];
     }
   }
 
@@ -153,7 +159,7 @@ class OperationalTransformation {
         { ...op2, position: pos2 }
       ];
     } else {
-      // Overlapping deletes - need to handle carefully
+      // Overlapping deletes - use last-write-wins
       if (pos1 <= pos2 && end1 >= end2) {
         // op1 completely contains op2
         return [
@@ -167,8 +173,20 @@ class OperationalTransformation {
           { ...op2, position: pos2, content: op2.content }
         ];
       } else {
-        // Partial overlap - this is complex and may need conflict resolution
-        throw new Error('CONFLICT: Overlapping delete operations');
+        // Partial overlap - use timestamp to decide
+        const timestamp1 = op1.timestamp || 0;
+        const timestamp2 = op2.timestamp || 0;
+        if (timestamp1 >= timestamp2) {
+          return [
+            { ...op1, position: pos1, content: op1.content },
+            { type: 'noop', position: 0, content: '', userId: op2.userId, timestamp: op2.timestamp }
+          ];
+        } else {
+          return [
+            { type: 'noop', position: 0, content: '', userId: op1.userId, timestamp: op1.timestamp },
+            { ...op2, position: pos2, content: op2.content }
+          ];
+        }
       }
     }
   }
@@ -181,33 +199,32 @@ class OperationalTransformation {
    */
   static applyOperation(content, operation) {
     if (!operation || !operation.type) {
-      throw new Error('Invalid operation provided');
+      return content;
     }
 
-    const chars = content.split('');
-    const position = operation.position || 0;
+    if (operation.type === 'noop') {
+      return content;
+    }
+
+    const position = Math.max(0, Math.min(operation.position || 0, content.length));
     
     switch (operation.type) {
       case 'insert':
         if (operation.content) {
-          const insertChars = operation.content.split('');
-          chars.splice(position, 0, ...insertChars);
+          return content.slice(0, position) + operation.content + content.slice(position);
         }
         break;
       case 'delete':
         if (operation.content) {
-          const deleteLength = operation.content.length;
-          chars.splice(position, deleteLength);
+          const deleteLength = Math.min(operation.content.length, content.length - position);
+          return content.slice(0, position) + content.slice(position + deleteLength);
         }
         break;
-      case 'noop':
-        // No operation - return content unchanged
-        break;
       default:
-        throw new Error(`Unsupported operation type: ${operation.type}`);
+        return content;
     }
     
-    return chars.join('');
+    return content;
   }
 
   /**
@@ -222,6 +239,34 @@ class OperationalTransformation {
       result = this.applyOperation(result, operation);
     }
     return result;
+  }
+
+  /**
+   * Transform operation against array of operations
+   * @param {Object} operation - Operation to transform
+   * @param {Array} operations - Array of operations to transform against
+   * @returns {Object} - Transformed operation
+   */
+  static transformAgainstOperations(operation, operations) {
+    let transformedOp = operation;
+    
+    for (const op of operations) {
+      if (!op || op.type === 'noop') continue;
+      
+      try {
+        const [transformedNewOp] = this.transform(transformedOp, op);
+        transformedOp = transformedNewOp;
+        
+        if (transformedOp.type === 'noop') {
+          return null;
+        }
+      } catch (error) {
+        console.error('Error transforming operation:', error);
+        return null;
+      }
+    }
+    
+    return transformedOp;
   }
 
   /**

@@ -1,4 +1,3 @@
-const axios = require('axios');
 const Note = require("../models/note.model");
 const userModel = require("../models/user.model");
 const NotificationService = require("./notification.service");
@@ -9,8 +8,9 @@ exports.createNote = async (data, userId) => {
     if (!user) throw new Error("User not found");
 
     // Fetch a random quote
-    const response = await axios.get('https://zenquotes.io/api/random');
-    const quote = response.data[0];
+    const response = await fetch('https://zenquotes.io/api/random');
+    const quoteData = await response.json();
+    const quote = quoteData[0];
 
     return await Note.create({
       ...data,

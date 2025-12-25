@@ -5,7 +5,6 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const compression = require('compression');
-const mongoSanitize = require('express-mongo-sanitize');
 const connectToDb = require('./config/db');
 const { enforceHTTPS } = require('./middlewares/https.middleware');
 const { requestLogger } = require('./middlewares/logger.middleware');
@@ -22,6 +21,34 @@ const app = express();
 // Connect to MongoDB
 connectToDb();
 
+// CORS - MUST be first to handle preflight OPTIONS requests
+// Clean environment variable (remove quotes and spaces)
+const cleanFrontendUrl = process.env.FRONTEND_URL?.trim().replace(/^['"]|['"]$/g, '') || '';
+const allowedOrigins = [
+  cleanFrontendUrl,
+  'http://localhost:5173',
+  'http://192.168.1.4:5173',
+  'http://127.0.0.1:5173'
+].filter(Boolean); // Remove empty/undefined values
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}. Allowed origins:`, allowedOrigins);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type'],
+}));
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -37,8 +64,10 @@ app.use(helmet({
 // Compression
 app.use(compression());
 
-// HTTPS enforcement
-app.use(enforceHTTPS);
+// HTTPS enforcement (only in production)
+if (process.env.NODE_ENV === 'production' && process.env.ENFORCE_HTTPS !== 'false') {
+  app.use(enforceHTTPS);
+}
 
 // Request logging
 app.use(requestLogger);
@@ -47,17 +76,8 @@ app.use(requestLogger);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Sanitize MongoDB queries
-app.use(mongoSanitize());
-
 // Cookie parser
 app.use(cookieParser());
-
-// CORS
-app.use(cors({
-  origin: [process.env.FRONTEND_URL, 'http://192.168.1.4:5173'],
-  credentials: true,
-}));
 
 // Rate limiting
 app.use(apiLimiter);

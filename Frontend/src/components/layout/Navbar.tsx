@@ -8,42 +8,54 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Search, Plus, Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut, Menu } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/auth.store';
 import { useLogout } from '@/hooks/api/useAuth';
+import { useUIStore } from '@/stores/ui.store';
+import { Logo } from '@/components/Logo';
+import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationDropdown } from '@/components/features/notifications/NotificationDropdown';
 
 function NavbarComponent() {
-  const { user, clearAuth } = useAuthStore();
+  const { user } = useAuthStore();
+  const { toggleSidebar } = useUIStore();
   const logoutMutation = useLogout();
+  const navigate = useNavigate();
 
   const handleLogout = useCallback(() => {
     logoutMutation.mutate();
   }, [logoutMutation]);
 
+  const handleSettings = useCallback(() => {
+    navigate('/settings');
+  }, [navigate]);
+
   return (
     <motion.nav
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md"
+      className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md"
     >
       <div className="container flex items-center justify-between h-14 px-4">
-        <div className="flex items-center gap-6">
-          <h1 className="text-lg font-semibold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-            NoteSync
-          </h1>
-          <Button variant="ghost" size="sm" className="gap-2">
-            <Search className="h-4 w-4" />
-            <span className="hidden md:inline">Search</span>
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:border hover:border-border"
+            onClick={toggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            <Menu className="h-4 w-4" />
           </Button>
+          <Logo size="sm" />
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" className="gap-2">
-            <Plus className="h-4 w-4" />
-            <span className="hidden md:inline">New Note</span>
-          </Button>
+          <NotificationDropdown />
+          <ThemeToggle />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:border hover:border-border">
                 <Avatar className="ring-2 ring-primary/20">
                   <AvatarFallback className="bg-primary/10 text-primary">
                     {user?.fullname?.[0]?.toUpperCase() || 'U'}
@@ -52,7 +64,7 @@ function NavbarComponent() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleSettings}>
                 <Settings className="mr-2 h-4 w-4" />
                 Settings
               </DropdownMenuItem>

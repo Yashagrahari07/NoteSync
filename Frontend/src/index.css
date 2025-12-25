@@ -3,7 +3,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@variant dark (&:is(.dark *));
 
 @theme {
     --color-primary: #2B85FF;
@@ -14,9 +14,15 @@
     html {
         font-family: "Poppins", "sans-serif";
     }
-    body{
-        background-color: #fdfeff;
+    body {
         overflow-x: hidden;
+    }
+    
+    /* Fix for gradient text visibility */
+    .bg-clip-text {
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 }
 
@@ -36,7 +42,9 @@
 
     /* Landing page specific styles */
     .gradient-text {
-        @apply bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent;
+        @apply bg-gradient-to-r from-[#2383e2] to-[#2383e2]/70 bg-clip-text text-transparent;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     .glass-effect {
@@ -269,22 +277,22 @@
 :root {
     --radius: 0.625rem;
     --background: 255 255 255;
-    --foreground: 55 53 47;
+    --foreground: 15 23 42;
     --card: 255 255 255;
-    --card-foreground: 55 53 47;
+    --card-foreground: 15 23 42;
     --popover: 255 255 255;
-    --popover-foreground: 55 53 47;
+    --popover-foreground: 15 23 42;
     --primary: 35 131 226;
     --primary-foreground: 255 255 255;
-    --secondary: 247 246 243;
-    --secondary-foreground: 55 53 47;
-    --muted: 247 246 243;
-    --muted-foreground: 120 119 116;
+    --secondary: 248 250 252;
+    --secondary-foreground: 15 23 42;
+    --muted: 241 245 249;
+    --muted-foreground: 100 116 139;
     --accent: 35 131 226;
     --accent-foreground: 255 255 255;
     --destructive: 239 68 68;
-    --border: 233 233 231;
-    --input: 233 233 231;
+    --border: 226 232 240;
+    --input: 226 232 240;
     --ring: 35 131 226;
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
@@ -302,23 +310,23 @@
 }
 
 .dark {
-    --background: 26 26 26;
-    --foreground: 237 237 237;
-    --card: 36 36 36;
-    --card-foreground: 237 237 237;
-    --popover: 36 36 36;
-    --popover-foreground: 237 237 237;
+    --background: 2 6 23;
+    --foreground: 248 250 252;
+    --card: 15 23 42;
+    --card-foreground: 248 250 252;
+    --popover: 15 23 42;
+    --popover-foreground: 248 250 252;
     --primary: 62 207 142;
-    --primary-foreground: 26 26 26;
-    --secondary: 36 36 36;
-    --secondary-foreground: 237 237 237;
-    --muted: 36 36 36;
-    --muted-foreground: 168 168 168;
+    --primary-foreground: 2 6 23;
+    --secondary: 30 41 59;
+    --secondary-foreground: 248 250 252;
+    --muted: 30 41 59;
+    --muted-foreground: 148 163 184;
     --accent: 62 207 142;
-    --accent-foreground: 26 26 26;
+    --accent-foreground: 2 6 23;
     --destructive: 239 68 68;
-    --border: 46 46 46;
-    --input: 46 46 46;
+    --border: 51 65 85;
+    --input: 51 65 85;
     --ring: 62 207 142;
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);

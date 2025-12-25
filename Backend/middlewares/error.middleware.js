@@ -1,6 +1,15 @@
 module.exports.errorHandler = (err, req, res, next) => {
   console.error('Error:', err);
 
+  // JSON syntax error (from express.json() middleware)
+  // Express 5's express.json() throws SyntaxError with status 400 when JSON is invalid
+  if (err instanceof SyntaxError && (err.status === 400 || err.message.includes('JSON'))) {
+    return res.status(400).json({
+      message: 'Invalid JSON in request body',
+      error: err.message,
+    });
+  }
+
   // Mongoose validation error
   if (err.name === 'ValidationError') {
     return res.status(400).json({

@@ -9,9 +9,9 @@ class NotificationController {
         parseInt(limit), 
         parseInt(skip)
       );
-      res.json(result);
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ success: false, error: { message: error.message } });
     }
   }
 
@@ -22,18 +22,18 @@ class NotificationController {
         notificationId, 
         req.user._id
       );
-      res.json(notification);
+      res.status(200).json({ success: true, data: notification });
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ success: false, error: { message: error.message } });
     }
   }
 
   static async markAllNotificationsAsRead(req, res) {
     try {
       const result = await NotificationService.markAllNotificationsAsRead(req.user._id);
-      res.json(result);
+      res.status(200).json({ success: true, data: result });
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ success: false, error: { message: error.message } });
     }
   }
 
@@ -44,18 +44,18 @@ class NotificationController {
         notificationId, 
         req.user._id
       );
-      res.json(notification);
+      res.status(200).json({ success: true, data: notification });
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ success: false, error: { message: error.message } });
     }
   }
 
   static async getUnreadCount(req, res) {
     try {
       const count = await NotificationService.getUnreadCount(req.user._id);
-      res.json({ unreadCount: count });
+      res.status(200).json({ success: true, data: { unreadCount: count } });
     } catch (error) {
-      res.status(500).json({ message: error.message });
+      res.status(500).json({ success: false, error: { message: error.message } });
     }
   }
 }

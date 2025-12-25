@@ -35,12 +35,152 @@ exports.createNote = async (data, userId) => {
 };
 
 exports.getAllNotes = async (userId, options = {}) => {
-  const { page = 1, limit = 20, sortBy = 'updatedOn', sortOrder = -1 } = options;
+  const { 
+    page = 1, 
+    limit = 20, 
+    sortBy = 'updatedOn', 
+    sortOrder = -1,
+    filterType = 'all', // 'all' | 'owned' | 'shared'
+    isPinned = undefined // boolean | undefined
+  } = options;
   
-  return await Note.find({ 
-    $or: [{ userId }, { "collaborators.userId": userId }] 
-  })
-    .select('title content tags isPinned updatedOn owner collaborators')
+  let query = {};
+  
+  // Base query based on filterType
+  if (filterType === 'owned') {
+    // Only notes owned by the user
+    query.userId = userId;
+  } else if (filterType === 'shared') {
+    // Only notes where user is a collaborator but NOT the owner
+    query = {
+      "collaborators.userId": userId,
+      userId: { $ne: userId } // Not the owner
+    };
+  } else {
+    // All notes (owned or shared)
+    query = {
+      $or: [{ userId }, { "collaborators.userId": userId }]
+    };
+  }
+  
+  // Add pinned filter if specified
+  if (isPinned !== undefined) {
+    query.isPinned = isPinned;
+  }
+  
+  return await Note.find(query)
+    .select('title content tags isPinned updatedOn owner collaborators userId')
+    .sort({ [sortBy]: sortOrder })
+    .skip((page - 1) * limit)
+    .limit(limit)
+    .lean();
+};
+
+exports.searchNotes = async (userId, query, filters = {}) => {
+  const { 
+    tags, 
+    dateRange, 
+    ownerId, 
+    collaboratorId, 
+    isPinned, 
+    page = 1, 
+    limit = 20, 
+    sortBy = 'updatedOn', 
+    sortOrder = -1,
+    filterType = 'all' // 'all' | 'owned' | 'shared'
+  } = filters;
+  
+  let searchQuery = {};
+  
+  // Base query based on filterType
+  if (filterType === 'owned') {
+    // Only notes owned by the user
+    searchQuery.userId = userId;
+  } else if (filterType === 'shared') {
+    // Only notes where user is a collaborator but NOT the owner
+    searchQuery = {
+      "collaborators.userId": userId,
+      userId: { $ne: userId } // Not the owner
+    };
+  } else {
+    // All notes (owned or shared)
+    searchQuery = {
+      $or: [{ userId }, { "collaborators.userId": userId }]
+    };
+  }
+  
+  // Text search - add to existing query using $and
+  if (query && query.trim()) {
+    const textSearch = {
+      $or: [
+        { title: { $regex: query.trim(), $options: 'i' } },
+        { content: { $regex: query.trim(), $options: 'i' } }
+      ]
+    };
+    
+    // Combine base query with text search using $and
+    const baseQuery = { ...searchQuery };
+    searchQuery = {
+      $and: [
+        baseQuery,
+        textSearch
+      ]
+    };
+  }
+  
+  // Tag filtering - add to $and if text search exists, otherwise add directly
+  if (tags && tags.length > 0) {
+    if (searchQuery.$and) {
+      searchQuery.$and.push({ tags: { $in: tags } });
+    } else {
+      searchQuery.tags = { $in: tags };
+    }
+  }
+  
+  // Date range filtering
+  if (dateRange && dateRange.start && dateRange.end) {
+    const dateFilter = {
+      updatedOn: {
+        $gte: new Date(dateRange.start),
+        $lte: new Date(dateRange.end)
+      }
+    };
+    if (searchQuery.$and) {
+      searchQuery.$and.push(dateFilter);
+    } else {
+      searchQuery.updatedOn = dateFilter.updatedOn;
+    }
+  }
+  
+  // Owner filtering (only if not already set by filterType)
+  if (ownerId && filterType === 'all') {
+    if (searchQuery.$and) {
+      searchQuery.$and.push({ userId: ownerId });
+    } else {
+      searchQuery.userId = ownerId;
+    }
+  }
+  
+  // Collaborator filtering (only if not already set by filterType)
+  if (collaboratorId && filterType === 'all') {
+    if (searchQuery.$and) {
+      searchQuery.$and.push({ "collaborators.userId": collaboratorId });
+    } else {
+      searchQuery["collaborators.userId"] = collaboratorId;
+    }
+  }
+  
+  // Pinned filtering
+  if (isPinned !== undefined) {
+    if (searchQuery.$and) {
+      searchQuery.$and.push({ isPinned });
+    } else {
+      searchQuery.isPinned = isPinned;
+    }
+  }
+  
+  return await Note.find(searchQuery)
+    .select('title content tags isPinned updatedOn owner collaborators userId')
     .sort({ [sortBy]: sortOrder })
     .skip((page - 1) * limit)
     .limit(limit)

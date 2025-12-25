@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -15,12 +15,26 @@ interface RichTextEditorProps {
 }
 
 function RichTextEditorComponent({ content, onChange, noteId }: RichTextEditorProps) {
-  const { emitOptimized } = useSocket(noteId);
+  const { emitOptimized, emitTypingStart, emitTypingStop } = useSocket(noteId);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleUpdate = useCallback((html: string) => {
     onChange(html);
     emitOptimized('editNote', { noteId, content: html }, 500);
-  }, [onChange, emitOptimized, noteId]);
+    
+    // Emit typing start
+    emitTypingStart(noteId);
+    
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Emit typing stop after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      emitTypingStop(noteId);
+    }, 2000);
+  }, [onChange, emitOptimized, emitTypingStart, emitTypingStop, noteId]);
 
   const editor = useEditor({
     extensions: [

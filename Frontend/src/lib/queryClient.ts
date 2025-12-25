@@ -4,7 +4,8 @@ import { getCookie, setCookie } from '@/lib/utils';
 import type { ApiError } from '@/types/api.types';
 
 // Environment variables - centralized configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:3000';
+// Default to HTTP for local development (HTTPS requires SSL certificates)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 /**
  * API Request Options Interface
@@ -25,10 +26,10 @@ class ApiClient {
   ): Promise<T> {
     const token = getCookie('authToken');
     
-    // Build headers
-    const headers: HeadersInit = {
+    // Build headers - use Record type for proper indexing
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (token) {
@@ -38,7 +39,7 @@ class ApiClient {
     // Build request options
     const requestOptions: RequestInit = {
       ...options,
-      headers,
+      headers: headers as HeadersInit,
       credentials: 'include', // Include cookies
     };
 
@@ -48,7 +49,7 @@ class ApiClient {
       // Handle rate limiting (429)
       if (response.status === 429) {
         const errorData = (await response.json().catch(() => ({}))) as ApiError;
-        const { code, retryAfter, message } = errorData;
+        const { retryAfter, message } = errorData;
         
         // Show toast notification (will be implemented with shadcn toast)
         console.error('Rate Limit Exceeded:', message || 'Too many requests. Please slow down.');
@@ -125,8 +126,10 @@ class ApiClient {
       return data as T;
     } catch (error) {
       // Network errors or other failures
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        console.error('Network Error: Unable to connect to the server. Please check your connection.');
+      if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Failed to fetch'))) {
+        const errorMessage = 'Network Error: Unable to connect to the server. Please check your connection and ensure the backend is running.';
+        console.error(errorMessage);
+        throw new Error(errorMessage);
       }
       throw error;
     }
@@ -181,8 +184,7 @@ export const queryClient = new QueryClient({
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     },
     mutations: {
-      retry: 1,
-      retryDelay: 1000,
+      retry: false, // Disable retry for mutations to prevent duplicate calls
     },
   },
 });

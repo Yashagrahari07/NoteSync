@@ -13,12 +13,57 @@ interface UpdateNoteData extends Partial<CreateNoteData> {
   isPinned?: boolean;
 }
 
-export const useNotes = () => {
+interface NotesQueryParams {
+  page?: number;
+  limit?: number;
+  sortBy?: 'updatedOn' | 'createdOn' | 'title';
+  sortOrder?: 1 | -1;
+  tags?: string[];
+  isPinned?: boolean;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  ownerId?: string;
+  collaboratorId?: string;
+  filterType?: 'all' | 'owned' | 'shared';
+}
+
+export const useNotes = (params?: NotesQueryParams) => {
   return useQuery<Note[], Error>({
-    queryKey: ['notes'],
+    queryKey: ['notes', params],
     queryFn: async () => {
-      const data = await apiClient.get<ApiResponse<Note[]>>('/notes');
-      return data.data || [];
+      if (params?.search) {
+        // Use search endpoint
+        const queryParams = new URLSearchParams();
+        if (params.search) queryParams.append('q', params.search);
+        if (params.tags && params.tags.length > 0) queryParams.append('tags', params.tags.join(','));
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.ownerId) queryParams.append('ownerId', params.ownerId);
+        if (params.collaboratorId) queryParams.append('collaboratorId', params.collaboratorId);
+        if (params.isPinned !== undefined) queryParams.append('isPinned', params.isPinned.toString());
+        if (params.filterType) queryParams.append('filterType', params.filterType);
+        if (params.page) queryParams.append('page', params.page.toString());
+        if (params.limit) queryParams.append('limit', params.limit.toString());
+        if (params.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder.toString());
+        
+        const data = await apiClient.get<ApiResponse<Note[]>>(`/notes/search?${queryParams.toString()}`);
+        return data.data || [];
+      } else {
+        // Use regular endpoint with query params
+        const queryParams = new URLSearchParams();
+        if (params?.filterType) queryParams.append('filterType', params.filterType);
+        if (params?.isPinned !== undefined) queryParams.append('isPinned', params.isPinned.toString());
+        if (params?.page) queryParams.append('page', params.page.toString());
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params?.sortOrder) queryParams.append('sortOrder', params.sortOrder.toString());
+        
+        const url = queryParams.toString() ? `/notes?${queryParams.toString()}` : '/notes';
+        const data = await apiClient.get<ApiResponse<Note[]>>(url);
+        return data.data || [];
+      }
     },
   });
 };

@@ -8,6 +8,8 @@ router.use(authUser);
 
 router.post("/", noteLimiter, noteController.createNote);
 
+router.get("/search", noteController.searchNotes);
+
 router.get("/", noteController.getAllNotes);
 
 router.get("/:id", noteController.getNoteById);

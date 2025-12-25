@@ -20,25 +20,34 @@ function SidebarComponent() {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: -300, opacity: 0 }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-64 border-r bg-card/50 backdrop-blur-md z-40"
+          className="fixed left-0 top-14 h-[calc(100vh-3.5rem)] w-64 border-r border-border bg-card/95 backdrop-blur-md z-40 shadow-lg md:block"
         >
-          <div className="flex items-center justify-between p-4 border-b">
-            <h2 className="font-semibold text-sm">Workspace</h2>
-            <Button variant="ghost" size="sm" onClick={handleToggle}>
+          <div className="flex items-center justify-between p-4 border-b border-border">
+            <h2 className="font-semibold text-sm text-foreground">Workspace</h2>
+            <Button variant="ghost" size="sm" onClick={handleToggle} className="hover:border hover:border-border">
               <X className="h-4 w-4" />
             </Button>
           </div>
           <ScrollArea className="h-[calc(100%-4rem)]">
             <nav className="p-2 space-y-1">
-              <Button variant="ghost" className="w-full justify-start gap-2">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start gap-2 hover:bg-accent hover:text-accent-foreground hover:border hover:border-border data-[active=true]:bg-accent data-[active=true]:text-accent-foreground data-[active=true]:border data-[active=true]:border-border transition-colors"
+              >
                 <FileText className="h-4 w-4" />
                 All Notes
               </Button>
-              <Button variant="ghost" className="w-full justify-start gap-2">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start gap-2 hover:bg-accent hover:text-accent-foreground hover:border hover:border-border data-[active=true]:bg-accent data-[active=true]:text-accent-foreground data-[active=true]:border data-[active=true]:border-border transition-colors"
+              >
                 <Star className="h-4 w-4" />
                 Starred
               </Button>
-              <Button variant="ghost" className="w-full justify-start gap-2">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start gap-2 hover:bg-accent hover:text-accent-foreground hover:border hover:border-border data-[active=true]:bg-accent data-[active=true]:text-accent-foreground data-[active=true]:border data-[active=true]:border-border transition-colors"
+              >
                 <Users className="h-4 w-4" />
                 Shared
               </Button>

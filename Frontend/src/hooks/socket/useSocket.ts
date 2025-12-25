@@ -6,6 +6,8 @@ import { getSocketClient, disconnectSocketClient } from '@/lib/socketClient';
 interface UseSocketReturn {
   socket: Socket | null;
   emitOptimized: (event: string, data: unknown, debounceMs?: number) => void;
+  emitTypingStart: (noteId: string) => void;
+  emitTypingStop: (noteId: string) => void;
 }
 
 export const useSocket = (noteId?: string): UseSocketReturn => {
@@ -60,7 +62,22 @@ export const useSocket = (noteId?: string): UseSocketReturn => {
     }
   }, []);
 
-  return { socket: socketRef.current, emitOptimized };
+  const emitTypingStart = useCallback((noteId: string) => {
+    if (!socketRef.current || !noteId) return;
+    socketRef.current.emit('typingStart', noteId);
+  }, []);
+
+  const emitTypingStop = useCallback((noteId: string) => {
+    if (!socketRef.current || !noteId) return;
+    socketRef.current.emit('typingStop', noteId);
+  }, []);
+
+  return { 
+    socket: socketRef.current, 
+    emitOptimized,
+    emitTypingStart,
+    emitTypingStop,
+  };
 };
 
 /**

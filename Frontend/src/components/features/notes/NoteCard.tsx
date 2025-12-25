@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -18,6 +18,7 @@ import {
 import { Pin, Edit, Trash2, MoreVertical, User, Users, Clock } from 'lucide-react';
 import type { Note } from '@/types/note.types';
 import { formatDistanceToNow } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface NoteCardProps {
   note: Note;
@@ -51,8 +52,8 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <Card className="hover:shadow-md transition-all duration-200 border-border/50">
-          <CardContent className="p-4">
+        <Card className="hover:shadow-md hover:border-primary/20 transition-all duration-200 border border-border cursor-pointer" onClick={() => onEdit(note._id)}>
+          <CardContent className="p-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2">
@@ -60,14 +61,14 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
                     {isOwned ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <User className="h-3 w-3 text-green-500" />
+                          <User className="h-3 w-3 text-green-600 dark:text-green-400" />
                         </TooltipTrigger>
                         <TooltipContent>My Note</TooltipContent>
                       </Tooltip>
                     ) : (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Users className="h-3 w-3 text-purple-500" />
+                          <Users className="h-3 w-3 text-purple-600 dark:text-purple-400" />
                         </TooltipTrigger>
                         <TooltipContent>Shared Note</TooltipContent>
                       </Tooltip>
@@ -75,7 +76,7 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
                   </TooltipProvider>
                   <h3 className="text-base font-semibold truncate">{note.title}</h3>
                   {note.isPinned && (
-                    <Pin className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                    <Pin className="h-3 w-3 text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400" />
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
@@ -95,26 +96,23 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
                   {truncatedContent}
                 </p>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onPin(note._id)}
-                  className={note.isPinned ? 'text-yellow-500' : ''}
+                  onClick={(e) => { e.stopPropagation(); onPin(note._id); }}
+                  className={cn('h-7 w-7 p-0', note.isPinned && 'text-yellow-600 dark:text-yellow-400')}
                 >
                   <Pin className={`h-4 w-4 ${note.isPinned ? 'fill-current' : ''}`} />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => onEdit(note._id)}>
-                  <Edit className="h-4 w-4" />
-                </Button>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onDelete(note._id)} className="text-destructive">
+                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(note._id); }} className="text-destructive">
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete
                     </DropdownMenuItem>
@@ -136,50 +134,50 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
         whileHover={{ scale: 1.02 }}
         className="h-full"
       >
-      <Card className="h-full flex flex-col hover:shadow-lg transition-all duration-200 border-border/50 group">
-        <CardContent className="p-6 flex-1 flex flex-col">
-          <div className="flex items-start justify-between mb-3">
+      <Card className="h-full flex flex-col hover:shadow-md hover:border-primary/20 transition-all duration-200 border border-border group cursor-pointer" onClick={() => onEdit(note._id)}>
+        <CardContent className="p-4 flex-1 flex flex-col">
+          <div className="flex items-start justify-between mb-2">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-1.5 mb-1.5">
                 <TooltipProvider>
                   {isOwned ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <User className="h-3 w-3 text-green-500" />
+                        <User className="h-3 w-3 text-green-600 dark:text-green-400 shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>My Note</TooltipContent>
                     </Tooltip>
                   ) : (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Users className="h-3 w-3 text-purple-500" />
+                        <Users className="h-3 w-3 text-purple-600 dark:text-purple-400 shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>Shared Note</TooltipContent>
                     </Tooltip>
                   )}
                 </TooltipProvider>
                 {note.isPinned && (
-                  <Pin className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                  <Pin className="h-3 w-3 text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400 shrink-0" />
                 )}
               </div>
-              <h3 className="text-lg font-semibold line-clamp-2 mb-2">{note.title}</h3>
+              <h3 className="text-base font-semibold line-clamp-2 mb-2">{note.title}</h3>
             </div>
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 p-0 shrink-0">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onPin(note._id)}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onPin(note._id); }}>
                   <Pin className="mr-2 h-4 w-4" />
                   {note.isPinned ? 'Unpin' : 'Pin'}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onEdit(note._id)}>
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(note._id); }}>
                   <Edit className="mr-2 h-4 w-4" />
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDelete(note._id)} className="text-destructive">
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(note._id); }} className="text-destructive">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
@@ -187,35 +185,22 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
             </DropdownMenu>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-            <Clock className="h-3 w-3" />
-            <span>{formattedDate}</span>
-          </div>
-
-          <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
+          <p className="text-sm text-muted-foreground line-clamp-2 mb-2 flex-1">
             {truncatedContent}
           </p>
 
-          {note.tags && note.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 mb-4">
-              {note.tags.slice(0, 3).map((tag, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
+          <div className="flex items-center justify-between gap-2 mt-auto">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>{formattedDate}</span>
             </div>
-          )}
+            {note.tags && note.tags.length > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                {note.tags[0]}
+              </Badge>
+            )}
+          </div>
         </CardContent>
-
-        <CardFooter className="p-6 pt-0">
-          <Button
-            onClick={() => onEdit(note._id)}
-            className="w-full"
-            variant="default"
-          >
-            Open Note
-          </Button>
-        </CardFooter>
       </Card>
     </motion.div>
   );

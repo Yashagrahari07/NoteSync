@@ -3,12 +3,13 @@ import { createBrowserRouter, RouteObject } from 'react-router-dom';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
-const Home = lazy(() => import('@/pages/Home/Home'));
-const EditNote = lazy(() => import('@/pages/EditNote/EditNote'));
-const Login = lazy(() => import('@/pages/Login/Login'));
-const SignUp = lazy(() => import('@/pages/SignUp/SignUp'));
-const LandingPage = lazy(() => import('@/pages/LandingPage/LandingPage'));
-const JoinNote = lazy(() => import('@/pages/JoinNote/JoinNote'));
+const Home = lazy(() => import('@/pages/Home/Home.tsx'));
+const EditNote = lazy(() => import('@/pages/EditNote/EditNote.tsx'));
+const Login = lazy(() => import('@/pages/Login/Login.tsx'));
+const SignUp = lazy(() => import('@/pages/SignUp/SignUp.tsx'));
+const LandingPage = lazy(() => import('@/pages/LandingPage/LandingPage.tsx'));
+const JoinNote = lazy(() => import('@/pages/JoinNote/JoinNote.tsx'));
+const Settings = lazy(() => import('@/pages/Settings/Settings.tsx'));
 
 const NotFoundPage = () => (
   <div className="text-center mt-12">
@@ -76,6 +77,16 @@ export const router = createBrowserRouter([
       <ProtectedRoute>
         <Suspense fallback={<LoadingSpinner />}>
           <JoinNote />
+        </Suspense>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/settings',
+    element: (
+      <ProtectedRoute>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Settings />
         </Suspense>
       </ProtectedRoute>
     ),

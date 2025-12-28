@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Navbar } from '@/components/layout/Navbar';
-import { Sidebar } from '@/components/layout/Sidebar';
 import { NoteCard } from '@/components/features/notes/NoteCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,9 +16,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Search, Grid3x3, List, Star } from 'lucide-react';
 import { useNotes, useDeleteNote, useTogglePinNote, useCreateNote } from '@/hooks/api/useNotes';
-import { useUIStore } from '@/stores/ui.store';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -98,24 +95,15 @@ export default function Home() {
     }
   };
 
-  const { sidebarOpen } = useUIStore();
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="flex relative">
-        <Sidebar />
-        <main
-          className={cn(
-            'flex-1 p-4 sm:p-6 lg:p-8 transition-all duration-300 ease-in-out w-full',
-            sidebarOpen && 'md:ml-64'
-          )}
-        >
-          <div className="max-w-7xl mx-auto space-y-6">
+      <main className="flex-1 transition-all duration-300 ease-in-out w-full">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">All Notes</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">All Notes</h1>
                 <p className="text-muted-foreground mt-1">
                   {filteredNotes.length} {filteredNotes.length === 1 ? 'note' : 'notes'}
                 </p>
@@ -185,19 +173,25 @@ export default function Home() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
                 className="flex flex-col items-center justify-center py-16 text-center"
               >
-                <div className="rounded-full bg-muted p-6 mb-4">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.1, duration: 0.3 }}
+                  className="rounded-full bg-muted p-6 mb-4"
+                >
                   <Search className="h-8 w-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">No notes found</h3>
+                </motion.div>
+                <h3 className="text-xl font-semibold mb-2 text-foreground">No notes found</h3>
                 <p className="text-muted-foreground mb-6 max-w-sm">
                   {searchQuery
                     ? 'Try adjusting your search or filters'
                     : 'Get started by creating your first note'}
                 </p>
                 {!searchQuery && (
-                  <Button onClick={handleCreateNote} className="gap-2">
+                  <Button onClick={handleCreateNote} className="gap-2 transition-all hover:scale-105">
                     <Plus className="h-4 w-4" />
                     Create Note
                   </Button>
@@ -223,8 +217,6 @@ export default function Home() {
             )}
           </div>
         </main>
-      </div>
     </div>
   );
 }
-

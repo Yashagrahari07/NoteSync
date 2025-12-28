@@ -5,11 +5,11 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from "lucide-react"
+import { useTheme } from "next-themes"
 import { Toaster as Sonner, type ToasterProps } from "sonner"
-import { useUIStore } from "@/stores/ui.store"
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme } = useUIStore()
+  const { theme = "system" } = useTheme()
 
   return (
     <Sonner

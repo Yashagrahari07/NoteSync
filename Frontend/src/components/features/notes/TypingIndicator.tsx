@@ -55,7 +55,7 @@ function TypingIndicatorComponent({ typingUsers }: TypingIndicatorProps) {
         exit={{ opacity: 0, y: -10 }}
         className="flex items-center gap-2 text-sm text-muted-foreground px-4 py-2"
       >
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
         <span>{getTypingText()}</span>
       </motion.div>
     </AnimatePresence>

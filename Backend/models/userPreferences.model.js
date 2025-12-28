@@ -35,7 +35,4 @@ userPreferencesSchema.pre("save", function (next) {
   next();
 });
 
-// Index for efficient querying
-userPreferencesSchema.index({ userId: 1 }); // Already unique, but explicit index
-
 module.exports = mongoose.model("userPreferences", userPreferencesSchema);

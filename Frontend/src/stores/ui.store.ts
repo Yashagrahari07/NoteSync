@@ -3,9 +3,7 @@ import { create } from 'zustand';
 type Theme = 'light' | 'dark';
 
 interface UIState {
-  sidebarOpen: boolean;
   theme: Theme;
-  toggleSidebar: () => void;
   setTheme: (theme: Theme) => void;
 }
 
@@ -37,9 +35,7 @@ const initializeTheme = (): Theme => {
 };
 
 export const useUIStore = create<UIState>((set) => ({
-  sidebarOpen: true,
   theme: initializeTheme(),
-  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setTheme: (theme: Theme) => {
     set({ theme });
     // Apply theme to HTML immediately when state changes
@@ -53,4 +49,3 @@ export const useUIStore = create<UIState>((set) => ({
     localStorage.setItem('theme', theme);
   },
 }));
-

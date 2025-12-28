@@ -69,7 +69,7 @@ exports.getAllNotes = async (userId, options = {}) => {
   }
   
   return await Note.find(query)
-    .select('title content tags isPinned updatedOn owner collaborators userId')
+    .select('title content description tags isPinned updatedOn owner collaborators userId quote')
     .sort({ [sortBy]: sortOrder })
     .skip((page - 1) * limit)
     .limit(limit)
@@ -180,7 +180,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
   }
   
   return await Note.find(searchQuery)
-    .select('title content tags isPinned updatedOn owner collaborators userId')
+    .select('title content description tags isPinned updatedOn owner collaborators userId quote')
     .sort({ [sortBy]: sortOrder })
     .skip((page - 1) * limit)
     .limit(limit)
@@ -209,12 +209,15 @@ exports.getNoteById = async (id, userId) => {
 };
 
 exports.updateNote = async (id, data, userId) => {
+  // Remove createdOn from data if present to prevent it from being updated
+  const { createdOn, ...updateData } = data;
+  
   return await Note.findOneAndUpdate(
     { _id: id, $or: [{ userId }, { "collaborators.userId": userId }] },
-    { ...data, updatedOn: Date.now() },
+    { ...updateData, updatedOn: Date.now() },
     { new: true }
   )
-    .select('title content tags isPinned updatedOn owner collaborators')
+    .select('title content description tags isPinned updatedOn createdOn owner collaborators quote')
     .lean();
 };
 

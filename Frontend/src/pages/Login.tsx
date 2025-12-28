@@ -8,39 +8,38 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useRegister } from '@/hooks/api/useAuth';
+import { useLogin } from '@/hooks/api/useAuth';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 
-const signupSchema = z.object({
-  fullname: z.string().min(1, 'Full name is required'),
+const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(1, 'Password is required'),
 });
 
-type SignUpFormData = z.infer<typeof signupSchema>;
+type LoginFormData = z.infer<typeof loginSchema>;
 
-export default function SignUp() {
+export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const registerMutation = useRegister();
+  const loginMutation = useLogin();
 
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignUpFormData>({
-    resolver: zodResolver(signupSchema),
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: SignUpFormData) => {
+  const onSubmit = async (data: LoginFormData) => {
     try {
-      await registerMutation.mutateAsync(data);
-      toast.success('Account created successfully!');
-      navigate('/login');
+      await loginMutation.mutateAsync(data);
+      toast.success('Welcome back!');
+      navigate('/dashboard');
     } catch (error: any) {
-      toast.error(error?.message || 'Signup failed. Please try again.');
+      toast.error(error?.message || 'Login failed. Please try again.');
     }
   };
 
@@ -57,27 +56,13 @@ export default function SignUp() {
             <div className="flex items-center justify-center mb-4">
               <Logo size="lg" />
             </div>
-            <CardTitle className="text-3xl font-bold">Create your account</CardTitle>
+            <CardTitle className="text-3xl font-bold">Welcome back</CardTitle>
             <CardDescription className="text-base">
-              Join thousands of users collaborating effectively
+              Sign in to your account to continue
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullname">Full Name</Label>
-                <Input
-                  id="fullname"
-                  type="text"
-                  placeholder="Enter your full name"
-                  {...register('fullname')}
-                  className={errors.fullname ? 'border-destructive' : ''}
-                />
-                {errors.fullname && (
-                  <p className="text-sm text-destructive">{errors.fullname.message}</p>
-                )}
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="email">Email Address</Label>
                 <Input
@@ -102,18 +87,19 @@ export default function SignUp() {
                     {...register('password')}
                     className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                  </Button>
                 </div>
                 {errors.password && (
                   <p className="text-sm text-destructive">{errors.password.message}</p>
                 )}
-                <p className="text-xs text-muted-foreground">Must be at least 6 characters</p>
               </div>
 
               <Button
@@ -121,33 +107,26 @@ export default function SignUp() {
                 variant="outline"
                 className="w-full"
                 size="lg"
-                disabled={registerMutation.isPending}
+                disabled={loginMutation.isPending}
               >
-                {registerMutation.isPending ? (
+                {loginMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
+                    Signing in...
                   </>
                 ) : (
-                  'Create Account'
+                  'Sign In'
                 )}
               </Button>
 
               <div className="text-center text-sm">
-                <span className="text-muted-foreground">Already have an account? </span>
+                <span className="text-muted-foreground">Don't have an account? </span>
                 <Link
-                  to="/login"
+                  to="/signup"
                   className="font-semibold text-primary hover:underline"
                 >
-                  Sign in here
+                  Create one now
                 </Link>
-              </div>
-
-              <div className="text-center text-xs text-muted-foreground pt-2">
-                By creating an account, you agree to our{' '}
-                <a href="#" className="text-primary hover:underline">Terms of Service</a>
-                {' '}and{' '}
-                <a href="#" className="text-primary hover:underline">Privacy Policy</a>
               </div>
             </form>
           </CardContent>
@@ -156,4 +135,3 @@ export default function SignUp() {
     </div>
   );
 }
-

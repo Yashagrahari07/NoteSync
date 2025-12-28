@@ -41,6 +41,24 @@ const updateNote = async (req, res) => {
   try {
     const updated = await NoteService.updateNote(req.params.id, req.body, req.user._id);
     if (!updated) return res.status(404).json({ success: false, message: "Note not found or unauthorized" });
+    
+    // Broadcast update to all collaborators via socket.io
+    // This ensures real-time sync when autosave happens via REST API
+    const io = req.app.get('io');
+    if (io) {
+      const noteIdStr = updated._id.toString();
+      const room = io.sockets.adapter.rooms.get(noteIdStr);
+      if (room) {
+        // Emit noteUpdated with author metadata so frontend can differentiate save vs sync
+        io.to(noteIdStr).emit('noteUpdated', {
+          ...updated,
+          savedBy: req.user._id.toString(),
+          savedAt: updated.updatedOn,
+        });
+        console.log(`Broadcasted REST API update for note ${noteIdStr} to ${room.size} users`);
+      }
+    }
+    
     res.status(200).json({ success: true, data: updated });
   } catch (err) {
     res.status(500).json({ success: false, error: { message: err.message } });

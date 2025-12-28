@@ -9,6 +9,7 @@ interface CreateNoteData {
 }
 
 interface UpdateNoteData extends Partial<CreateNoteData> {
+  description?: string;
   tags?: string[];
   isPinned?: boolean;
 }
@@ -104,9 +105,17 @@ export const useUpdateNote = () => {
       if (!data.data) throw new Error('Failed to update note');
       return data.data;
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['notes'] });
-      queryClient.invalidateQueries({ queryKey: ['notes', variables.noteId] });
+    onSuccess: (updatedNote, variables) => {
+      // Optimistically update the note cache without refetching
+      // This prevents socket reconnection issues
+      queryClient.setQueryData(['notes', variables.noteId], updatedNote);
+      
+      // Invalidate the list query to update the note in the list (but don't refetch current note)
+      queryClient.invalidateQueries({ 
+        queryKey: ['notes'],
+        exact: false,
+        refetchType: 'none' // Don't refetch, just update cache
+      });
     },
   });
 };

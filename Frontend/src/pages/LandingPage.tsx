@@ -66,10 +66,19 @@ export default function LandingPage() {
               <Sparkles className="h-4 w-4" />
               <span>Collaborate in Real-Time</span>
             </div>
-            <h1 className="text-5xl lg:text-7xl font-bold tracking-tight">
+            <h1 className="text-5xl lg:text-7xl font-bold tracking-tight text-foreground">
               Your notes,
               <br />
-              <span className="bg-gradient-to-r from-[#2383e2] to-[#2383e2]/70 dark:from-[#3ecf8e] dark:to-[#3ecf8e]/70 bg-clip-text text-transparent">
+              <span 
+                style={{
+                  background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary) / 0.7))',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  color: 'transparent',
+                  display: 'inline-block',
+                }}
+              >
                 synchronized
               </span>
             </h1>
@@ -110,7 +119,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl font-bold mb-4">Everything you need</h2>
+            <h2 className="text-4xl font-bold mb-4 text-foreground">Everything you need</h2>
             <p className="text-xl text-muted-foreground">
               Powerful features to help you collaborate effectively
             </p>
@@ -123,12 +132,12 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="p-6 rounded-lg bg-card border border-border/50 hover:shadow-lg transition-shadow"
+                className="p-6 rounded-lg bg-card border border-border/50 hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
               >
                 <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
                   <feature.icon className="h-6 w-6 text-primary" />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
+                <h3 className="text-xl font-semibold mb-2 text-foreground">{feature.title}</h3>
                 <p className="text-muted-foreground">{feature.description}</p>
               </motion.div>
             ))}
@@ -146,7 +155,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            <h2 className="text-4xl font-bold">Ready to get started?</h2>
+            <h2 className="text-4xl font-bold text-foreground">Ready to get started?</h2>
             <p className="text-xl text-muted-foreground">
               Join thousands of users who are already collaborating with NoteSync
             </p>

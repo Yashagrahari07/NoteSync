@@ -10,11 +10,19 @@ module.exports.handleTypingStart = async (socket, noteId, io) => {
   }
 
   try {
+    const noteIdStr = noteId.toString();
+    
+    // Ensure socket is in the room
+    const rooms = Array.from(socket.rooms);
+    if (!rooms.includes(noteIdStr)) {
+      socket.join(noteIdStr);
+    }
+
     const user = await UserModel.findById(socket.userId);
     if (!user) return;
 
-    socket.to(noteId).emit('userTyping', {
-      userId: socket.userId,
+    socket.to(noteIdStr).emit('userTyping', {
+      userId: socket.userId.toString(),
       userFullname: user.fullname,
       timestamp: Date.now()
     });
@@ -30,8 +38,16 @@ module.exports.handleTypingStop = async (socket, noteId, io) => {
   }
 
   try {
-    socket.to(noteId).emit('userStoppedTyping', {
-      userId: socket.userId,
+    const noteIdStr = noteId.toString();
+    
+    // Ensure socket is in the room
+    const rooms = Array.from(socket.rooms);
+    if (!rooms.includes(noteIdStr)) {
+      socket.join(noteIdStr);
+    }
+
+    socket.to(noteIdStr).emit('userStoppedTyping', {
+      userId: socket.userId.toString(),
       timestamp: Date.now()
     });
   } catch (error) {
@@ -41,6 +57,8 @@ module.exports.handleTypingStop = async (socket, noteId, io) => {
 
 module.exports.handleCollaboratorAdded = async (socket, noteId, collaboratorData, io) => {
   try {
+    const noteIdStr = noteId.toString();
+    
     const note = await NoteService.getNoteById(noteId, socket.userId);
     if (!note) {
       socket.emit('error', { message: 'Note not found' });
@@ -52,14 +70,14 @@ module.exports.handleCollaboratorAdded = async (socket, noteId, collaboratorData
 
     const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
 
-    io.to(noteId).emit('collaboratorAdded', {
+    io.to(noteIdStr).emit('collaboratorAdded', {
       note: note,
       collaborator: collaboratorData,
       timestamp: Date.now()
     });
 
     if (preferences.notifications.collaboratorChanges) {
-      io.to(noteId).emit('notification', {
+      io.to(noteIdStr).emit('notification', {
         type: 'collaboratorAdded',
         message: `${collaboratorData.fullname} was added as a collaborator`,
         userId: collaboratorData.userId,
@@ -74,6 +92,8 @@ module.exports.handleCollaboratorAdded = async (socket, noteId, collaboratorData
 
 module.exports.handleCollaboratorRemoved = async (socket, noteId, collaboratorData, io) => {
   try {
+    const noteIdStr = noteId.toString();
+    
     const note = await NoteService.getNoteById(noteId, socket.userId);
     if (!note) {
       socket.emit('error', { message: 'Note not found' });
@@ -85,14 +105,14 @@ module.exports.handleCollaboratorRemoved = async (socket, noteId, collaboratorDa
 
     const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
 
-    io.to(noteId).emit('collaboratorRemoved', {
+    io.to(noteIdStr).emit('collaboratorRemoved', {
       note: note,
       collaborator: collaboratorData,
       timestamp: Date.now()
     });
 
     if (preferences.notifications.collaboratorChanges) {
-      io.to(noteId).emit('notification', {
+      io.to(noteIdStr).emit('notification', {
         type: 'collaboratorRemoved',
         message: `${collaboratorData.fullname} was removed as a collaborator`,
         userId: collaboratorData.userId,

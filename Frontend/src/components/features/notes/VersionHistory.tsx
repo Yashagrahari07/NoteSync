@@ -1,9 +1,9 @@
 import { memo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { History, RotateCcw, X, Eye } from 'lucide-react';
+import { History, RotateCcw, Eye } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -18,10 +18,14 @@ import { formatDistanceToNow } from 'date-fns';
 
 interface VersionHistoryProps {
   noteId: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-function VersionHistoryComponent({ noteId }: VersionHistoryProps) {
-  const [open, setOpen] = useState(false);
+function VersionHistoryComponent({ noteId, open: controlledOpen, onOpenChange }: VersionHistoryProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [previewVersion, setPreviewVersion] = useState<number | null>(null);
   const { data: versions, isLoading } = useVersionHistory(noteId);
   const { data: previewData } = useVersion(noteId, previewVersion || 0);
@@ -43,12 +47,14 @@ function VersionHistoryComponent({ noteId }: VersionHistoryProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <History className="h-4 w-4 mr-2" />
-          Version History
-        </Button>
-      </DialogTrigger>
+      {controlledOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <History className="h-4 w-4 mr-2" />
+            Version History
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-4xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>Version History</DialogTitle>
@@ -71,10 +77,10 @@ function VersionHistoryComponent({ noteId }: VersionHistoryProps) {
                     key={version._id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 ${
                       previewVersion === version.version
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50'
+                        ? 'border-primary bg-primary/5 shadow-sm'
+                        : 'border-border hover:border-primary/50 hover:bg-accent/30'
                     }`}
                     onClick={() => setPreviewVersion(version.version)}
                   >
@@ -82,7 +88,7 @@ function VersionHistoryComponent({ noteId }: VersionHistoryProps) {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold">Version {version.version}</span>
                         {version.conflictResolved && (
-                          <span className="text-xs bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 px-2 py-0.5 rounded">
+                          <span className="text-xs bg-[hsl(var(--warning))]/20 text-[hsl(var(--warning))] px-2 py-0.5 rounded">
                             Conflict Resolved
                           </span>
                         )}

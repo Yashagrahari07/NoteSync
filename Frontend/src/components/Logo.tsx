@@ -23,19 +23,29 @@ export function Logo({ className, showText = true, size = 'md' }: LogoProps) {
   return (
     <div className={cn('flex items-center gap-2', className)}>
       <div className={cn(
-        'relative bg-gradient-to-br from-[#2383e2] via-[#2383e2] to-[#1a73d1] rounded-xl flex items-center justify-center shadow-lg shadow-[#2383e2]/20',
+        'relative bg-gradient-to-br from-primary via-primary to-primary/80 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20',
         sizeClasses[size]
       )}>
-        <FileText className="h-5 w-5 text-white" strokeWidth={2.5} />
+        <FileText className="h-5 w-5 text-primary-foreground" strokeWidth={2.5} />
         <div className="absolute -top-0.5 -right-0.5">
-          <Sparkles className="h-3 w-3 text-[#2383e2] fill-white" />
+          <Sparkles className="h-3 w-3 text-primary fill-primary-foreground" />
         </div>
       </div>
       {showText && (
-        <span className={cn(
-          'font-bold bg-gradient-to-r from-[#2383e2] to-[#2383e2]/70 bg-clip-text text-transparent',
-          textSizeClasses[size]
-        )}>
+        <span 
+          className={cn(
+            'font-bold',
+            textSizeClasses[size]
+          )}
+          style={{
+            background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--primary) / 0.7))',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            color: 'transparent',
+            display: 'inline-block',
+          }}
+        >
           NoteSync
         </span>
       )}

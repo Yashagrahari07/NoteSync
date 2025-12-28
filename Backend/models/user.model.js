@@ -36,8 +36,6 @@ userSchema.statics.hashPassword = async function (password){
     return await bcrypt.hash(password, 10);
 } 
 
-// Indexes for efficient querying
-userSchema.index({ email: 1 }); // Already unique, but explicit index
 userSchema.index({ fullname: 1 }); // For search
 
 const userModel = mongoose.model('user', userSchema);

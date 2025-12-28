@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,8 +100,14 @@ export function NotificationDropdown() {
             </div>
           ) : notifications.length === 0 ? (
             <div className="p-8 text-center">
-              <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
-              <p className="text-sm text-muted-foreground">No notifications</p>
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground opacity-50" />
+                <p className="text-sm text-muted-foreground">No notifications</p>
+              </motion.div>
             </div>
           ) : (
             <div className="divide-y">
@@ -108,7 +115,7 @@ export function NotificationDropdown() {
                 <div
                   key={notification._id}
                   className={cn(
-                    'p-4 hover:bg-accent/50 transition-colors cursor-pointer relative group',
+                    'p-4 hover:bg-accent/50 transition-colors duration-200 cursor-pointer relative group',
                     !notification.isRead && 'bg-primary/5'
                   )}
                   onClick={() => handleNotificationClick(notification)}

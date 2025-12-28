@@ -3,6 +3,7 @@ const { socketAuth } = require('./socket/middleware/auth.middleware');
 const noteHandlers = require('./socket/handlers/note.handler');
 const collaborationHandlers = require('./socket/handlers/collaboration.handler');
 const conflictHandlers = require('./socket/handlers/conflict.handler');
+const cursorHandlers = require('./socket/handlers/cursor.handler');
 
 const activeUsers = {};
 
@@ -61,6 +62,10 @@ module.exports.setupSocket = (server) => {
 
     socket.on('applyOperation', (noteId, operation) => {
       setImmediate(() => conflictHandlers.handleApplyOperation(socket, noteId, operation, io));
+    });
+
+    socket.on('cursorMove', (noteId, cursorData) => {
+      setImmediate(() => cursorHandlers.handleCursorMove(socket, noteId, cursorData, io));
     });
 
     socket.on('requestVersionHistory', (noteId) => {

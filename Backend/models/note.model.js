@@ -13,6 +13,12 @@ const noteSchema = new Schema({
     type: String,
     default: ""
   },
+  description: {
+    type: String,
+    default: "",
+    trim: true,
+    maxlength: 500
+  },
   tags: {
     type: [String],
     default: []

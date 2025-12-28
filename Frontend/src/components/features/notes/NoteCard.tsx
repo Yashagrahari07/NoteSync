@@ -52,7 +52,7 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <Card className="hover:shadow-md hover:border-primary/20 transition-all duration-200 border border-border cursor-pointer" onClick={() => onEdit(note._id)}>
+        <Card className="hover:shadow-md hover:border-primary/20 transition-all duration-200 border border-border cursor-pointer hover:scale-[1.01]" onClick={() => onEdit(note._id)}>
           <CardContent className="p-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
@@ -61,14 +61,14 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
                     {isOwned ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <User className="h-3 w-3 text-green-600 dark:text-green-400" />
+                          <User className="h-3 w-3 text-[hsl(var(--success))]" />
                         </TooltipTrigger>
                         <TooltipContent>My Note</TooltipContent>
                       </Tooltip>
                     ) : (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Users className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+                          <Users className="h-3 w-3 text-[hsl(var(--info))]" />
                         </TooltipTrigger>
                         <TooltipContent>Shared Note</TooltipContent>
                       </Tooltip>
@@ -76,7 +76,7 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
                   </TooltipProvider>
                   <h3 className="text-base font-semibold truncate">{note.title}</h3>
                   {note.isPinned && (
-                    <Pin className="h-3 w-3 text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400" />
+                    <Pin className="h-3 w-3 text-[hsl(var(--warning))] fill-[hsl(var(--warning))]" />
                   )}
                 </div>
                 <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
@@ -96,12 +96,12 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
                   {truncatedContent}
                 </p>
               </div>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={(e) => { e.stopPropagation(); onPin(note._id); }}
-                  className={cn('h-7 w-7 p-0', note.isPinned && 'text-yellow-600 dark:text-yellow-400')}
+                  className={cn('h-7 w-7 p-0', note.isPinned && 'text-[hsl(var(--warning))]')}
                 >
                   <Pin className={`h-4 w-4 ${note.isPinned ? 'fill-current' : ''}`} />
                 </Button>
@@ -134,7 +134,7 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
         whileHover={{ scale: 1.02 }}
         className="h-full"
       >
-      <Card className="h-full flex flex-col hover:shadow-md hover:border-primary/20 transition-all duration-200 border border-border group cursor-pointer" onClick={() => onEdit(note._id)}>
+      <Card className="h-full flex flex-col hover:shadow-md hover:border-primary/20 transition-all duration-200 border border-border group cursor-pointer hover:scale-[1.02]" onClick={() => onEdit(note._id)}>
         <CardContent className="p-4 flex-1 flex flex-col">
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1 min-w-0">
@@ -143,28 +143,28 @@ function NoteCardComponent({ note, onEdit, onDelete, onPin, viewMode = 'grid' }:
                   {isOwned ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <User className="h-3 w-3 text-green-600 dark:text-green-400 shrink-0" />
+                        <User className="h-3 w-3 text-[hsl(var(--success))] shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>My Note</TooltipContent>
                     </Tooltip>
                   ) : (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Users className="h-3 w-3 text-purple-600 dark:text-purple-400 shrink-0" />
+                        <Users className="h-3 w-3 text-[hsl(var(--info))] shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>Shared Note</TooltipContent>
                     </Tooltip>
                   )}
                 </TooltipProvider>
                 {note.isPinned && (
-                  <Pin className="h-3 w-3 text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400 shrink-0" />
+                  <Pin className="h-3 w-3 text-[hsl(var(--warning))] fill-[hsl(var(--warning))] shrink-0" />
                 )}
               </div>
               <h3 className="text-base font-semibold line-clamp-2 mb-2">{note.title}</h3>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 p-0 shrink-0">
+                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 h-7 w-7 p-0 shrink-0 hover:bg-accent">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>

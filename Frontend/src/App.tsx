@@ -1,32 +1,39 @@
 import { lazy, Suspense } from 'react';
-import { createBrowserRouter, RouteObject } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, RouteObject } from 'react-router-dom';
+import { ReactNode } from 'react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/queryClient';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { AppErrorBoundary } from '@/components/ErrorBoundary';
+import { ConnectionStatus } from '@/components/ConnectionStatus';
+import { Toaster } from '@/components/ui/sonner';
+import { Button } from '@/components/ui/button';
 
-const Home = lazy(() => import('@/pages/Home/Home.tsx'));
-const EditNote = lazy(() => import('@/pages/EditNote/EditNote.tsx'));
-const Login = lazy(() => import('@/pages/Login/Login.tsx'));
-const SignUp = lazy(() => import('@/pages/SignUp/SignUp.tsx'));
-const LandingPage = lazy(() => import('@/pages/LandingPage/LandingPage.tsx'));
-const JoinNote = lazy(() => import('@/pages/JoinNote/JoinNote.tsx'));
-const Settings = lazy(() => import('@/pages/Settings/Settings.tsx'));
+// Lazy load pages (with corrected imports - no subfolders)
+const Home = lazy(() => import('@/pages/Home.tsx'));
+const EditNote = lazy(() => import('@/pages/EditNote.tsx'));
+const Login = lazy(() => import('@/pages/Login.tsx'));
+const SignUp = lazy(() => import('@/pages/SignUp.tsx'));
+const LandingPage = lazy(() => import('@/pages/LandingPage.tsx'));
+const JoinNote = lazy(() => import('@/pages/JoinNote.tsx'));
+const Settings = lazy(() => import('@/pages/Settings.tsx'));
 
+// 404 Page Component (using shadcn Button instead of native <a>)
 const NotFoundPage = () => (
   <div className="text-center mt-12">
     <h1 className="text-5xl font-bold text-destructive mb-4">404 - Page Not Found</h1>
     <p className="text-xl text-muted-foreground mb-8">
       Oops! The page you are looking for does not exist.
     </p>
-    <a
-      href="/"
-      className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-    >
-      Go Back to Home
-    </a>
+    <Button asChild>
+      <a href="/">Go Back to Home</a>
+    </Button>
   </div>
 );
 
-export const router = createBrowserRouter([
+// Router Configuration
+const router = createBrowserRouter([
   {
     path: '/',
     element: (
@@ -101,3 +108,24 @@ export const router = createBrowserRouter([
   },
 ] as RouteObject[]);
 
+// Providers Component (moved from app/providers.tsx)
+function Providers({ children }: { children: ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+
+// Main App Component
+export function App() {
+  return (
+    <AppErrorBoundary>
+      <Providers>
+        <ConnectionStatus />
+        <RouterProvider router={router} />
+        <Toaster />
+      </Providers>
+    </AppErrorBoundary>
+  );
+}

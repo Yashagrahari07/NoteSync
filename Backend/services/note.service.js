@@ -69,7 +69,7 @@ exports.getAllNotes = async (userId, options = {}) => {
   }
   
   return await Note.find(query)
-    .select('title content description tags isPinned updatedOn owner collaborators userId quote')
+    .select('title content description tags isPinned updatedOn owner collaborators userId quote settings')
     .sort({ [sortBy]: sortOrder })
     .skip((page - 1) * limit)
     .limit(limit)
@@ -180,7 +180,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
   }
   
   return await Note.find(searchQuery)
-    .select('title content description tags isPinned updatedOn owner collaborators userId quote')
+    .select('title content description tags isPinned updatedOn owner collaborators userId quote settings')
     .sort({ [sortBy]: sortOrder })
     .skip((page - 1) * limit)
     .limit(limit)
@@ -201,6 +201,23 @@ exports.getNoteById = async (id, userId) => {
       return null;
     }
 
+    // Ensure settings exist with defaults if not present (for backward compatibility)
+    if (!note.settings) {
+      note.settings = {
+        notifications: {
+          joinLeave: true,
+          collaboratorChanges: true,
+          liveEdits: true,
+          cursorMoves: true
+        },
+        realTime: {
+          showCursors: true,
+          showSelections: true,
+          showPresence: true
+        }
+      };
+    }
+
     return note;
   } catch (err) {
     console.error(`Error fetching note: ${err.message}`);
@@ -217,7 +234,7 @@ exports.updateNote = async (id, data, userId) => {
     { ...updateData, updatedOn: Date.now() },
     { new: true }
   )
-    .select('title content description tags isPinned updatedOn createdOn owner collaborators quote')
+    .select('title content description tags isPinned updatedOn createdOn owner collaborators quote settings')
     .lean();
 };
 
@@ -342,6 +359,53 @@ exports.togglePinNote = async (noteId, userId) => {
   if (!note) return null;
 
   note.isPinned = !note.isPinned;
+  await note.save();
+
+  return note.toObject();
+};
+
+// Update note settings
+exports.updateNoteSettings = async (noteId, userId, settings) => {
+  const note = await Note.findOne({
+    _id: noteId,
+    $or: [{ userId }, { "collaborators.userId": userId }],
+  });
+
+  if (!note) {
+    throw new Error("Note not found or unauthorized");
+  }
+
+  // Merge settings with existing settings
+  if (!note.settings) {
+    note.settings = {
+      notifications: {
+        joinLeave: true,
+        collaboratorChanges: true,
+        liveEdits: true,
+        cursorMoves: true
+      },
+      realTime: {
+        showCursors: true,
+        showSelections: true,
+        showPresence: true
+      }
+    };
+  }
+
+  if (settings.notifications) {
+    note.settings.notifications = {
+      ...note.settings.notifications,
+      ...settings.notifications
+    };
+  }
+
+  if (settings.realTime) {
+    note.settings.realTime = {
+      ...note.settings.realTime,
+      ...settings.realTime
+    };
+  }
+
   await note.save();
 
   return note.toObject();

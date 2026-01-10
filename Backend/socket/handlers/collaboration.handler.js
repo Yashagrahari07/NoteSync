@@ -1,6 +1,5 @@
 const UserModel = require('../../models/user.model');
 const NoteService = require('../../services/note.service');
-const UserPreferencesService = require('../../services/userPreferences.service');
 const { socketRateLimit } = require('../middleware/rateLimit.middleware');
 
 module.exports.handleTypingStart = async (socket, noteId, io) => {
@@ -68,7 +67,20 @@ module.exports.handleCollaboratorAdded = async (socket, noteId, collaboratorData
     const user = await UserModel.findById(socket.userId);
     if (!user) return;
 
-    const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
+    // Get note settings (with defaults if not present)
+    const noteSettings = note?.settings || {
+      notifications: {
+        joinLeave: true,
+        collaboratorChanges: true,
+        liveEdits: true,
+        cursorMoves: true
+      },
+      realTime: {
+        showCursors: true,
+        showSelections: true,
+        showPresence: true
+      }
+    };
 
     io.to(noteIdStr).emit('collaboratorAdded', {
       note: note,
@@ -76,7 +88,7 @@ module.exports.handleCollaboratorAdded = async (socket, noteId, collaboratorData
       timestamp: Date.now()
     });
 
-    if (preferences.notifications.collaboratorChanges) {
+    if (noteSettings.notifications.collaboratorChanges) {
       io.to(noteIdStr).emit('notification', {
         type: 'collaboratorAdded',
         message: `${collaboratorData.fullname} was added as a collaborator`,
@@ -103,7 +115,20 @@ module.exports.handleCollaboratorRemoved = async (socket, noteId, collaboratorDa
     const user = await UserModel.findById(socket.userId);
     if (!user) return;
 
-    const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
+    // Get note settings (with defaults if not present)
+    const noteSettings = note?.settings || {
+      notifications: {
+        joinLeave: true,
+        collaboratorChanges: true,
+        liveEdits: true,
+        cursorMoves: true
+      },
+      realTime: {
+        showCursors: true,
+        showSelections: true,
+        showPresence: true
+      }
+    };
 
     io.to(noteIdStr).emit('collaboratorRemoved', {
       note: note,
@@ -111,7 +136,7 @@ module.exports.handleCollaboratorRemoved = async (socket, noteId, collaboratorDa
       timestamp: Date.now()
     });
 
-    if (preferences.notifications.collaboratorChanges) {
+    if (noteSettings.notifications.collaboratorChanges) {
       io.to(noteIdStr).emit('notification', {
         type: 'collaboratorRemoved',
         message: `${collaboratorData.fullname} was removed as a collaborator`,

@@ -42,16 +42,16 @@ interface NoteEditingState {
   description: string;
   tags: string[];
   isPinned: boolean;
-  
+
   // Real-time collaboration
   activeUsers: ActiveUser[];
   typingUsers: TypingUser[];
   cursorPositions: Map<string, CursorPosition>;
-  
+
   // Socket connection
   socket: Socket | null;
   isConnected: boolean;
-  
+
   // Actions - Note data
   setNote: (note: Note) => void;
   updateTitle: (title: string) => void;
@@ -59,7 +59,7 @@ interface NoteEditingState {
   updateDescription: (description: string) => void;
   updateTags: (tags: string[]) => void;
   togglePin: () => void;
-  
+
   // Actions - Socket
   initializeSocket: (noteId: string) => void;
   cleanupSocket: () => void;
@@ -67,7 +67,7 @@ interface NoteEditingState {
   emitCursorMove: (position: number) => void;
   emitTypingStart: () => void;
   emitTypingStop: () => void;
-  
+
   // Actions - Event handlers
   handleUserJoined: (data: { user: { userId: string; fullname: string }; activeUsers: ActiveUser[] }) => void;
   handleUserLeft: (data: { user: { userId: string; fullname: string }; activeUsers: ActiveUser[] }) => void;
@@ -120,8 +120,8 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
   let currentNoteId: string | null = null;
   let listenersSetup = false;
   let connectOnceHandler: (() => void) | null = null;
-  const eventDeduplicator = new EventDeduplicator();
-  
+  let cleanupTimeout: NodeJS.Timeout | null = null; // Debounce cleanup for React Strict Mode
+
   // Helper to remove all event listeners from socket
   const removeAllListeners = (socket: Socket) => {
     const events = [
@@ -140,15 +140,15 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
     events.forEach(event => {
       socket.removeAllListeners(event);
     });
-    
+
     if (connectOnceHandler) {
       socket.off('connect', connectOnceHandler);
       connectOnceHandler = null;
     }
-    
+
     listenersSetup = false;
   };
-  
+
   // Generate unique event signature for deduplication
   const getEventSignature = (
     eventType: string,
@@ -159,7 +159,7 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
     const ts = timestamp || Date.now();
     return `${eventType}:${userId}:${noteId || 'unknown'}:${Math.floor(ts / 1000)}`;
   };
-  
+
   return {
     // Initial state
     noteId: null,
@@ -175,7 +175,7 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
     cursorPositions: new Map(),
     socket: null,
     isConnected: false,
-    
+
     // Set note data
     setNote: (note: Note) => {
       set({
@@ -189,7 +189,7 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         isPinned: note.isPinned || false,
       });
     },
-    
+
     updateTitle: (title: string) => {
       set({ title });
       const { socket, noteId } = get();
@@ -197,13 +197,13 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         socket.emit('editNote', noteId, { title });
       }
     },
-    
+
     updateContent: (content: string, emitOperation = true) => {
       const { previousContent, socket, noteId, isConnected } = get();
-      
+
       // Check content change before updating state to prevent false negatives
       const contentChanged = previousContent !== content;
-      
+
       // Only update previousContent when emitting to prevent race conditions
       // This allows subsequent calls to detect changes correctly
       if (contentChanged) {
@@ -213,13 +213,13 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
           set({ content });
         }
       }
-      
+
       // Emit WebSocket event for real-time collaboration
       if (emitOperation && contentChanged && socket && noteId && isConnected) {
         socket.emit('editNote', noteId, { content });
       }
     },
-    
+
     updateDescription: (description: string) => {
       set({ description });
       const { socket, noteId } = get();
@@ -227,7 +227,7 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         socket.emit('editNote', noteId, { description });
       }
     },
-    
+
     updateTags: (tags: string[]) => {
       set({ tags });
       const { socket, noteId } = get();
@@ -235,93 +235,103 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         socket.emit('editNote', noteId, { tags });
       }
     },
-    
+
     togglePin: () => {
       const { isPinned } = get();
       set({ isPinned: !isPinned });
     },
-    
+
     initializeSocket: (noteId: string) => {
       const { token } = useAuthStore.getState();
       if (!token) return;
-      
+
       const socket = getSocketClient(token);
       if (!socket) return;
-      
+
+      // Cancel any pending cleanup (handles React Strict Mode double-mount)
+      if (cleanupTimeout) {
+        clearTimeout(cleanupTimeout);
+        cleanupTimeout = null;
+        console.log('[Socket] Cancelled pending cleanup, reinitializing for:', noteId);
+      }
+
       // Prevent duplicate initialization for the same noteId
       if (currentNoteId === noteId && listenersSetup) {
         return;
       }
-      
-      // If noteId changed or socket instance changed, clean up previous listeners
-      if (currentNoteId !== null && (currentNoteId !== noteId || listenersSetup)) {
+
+      // If noteId changed, clean up previous listeners
+      if (currentNoteId !== null && currentNoteId !== noteId) {
         removeAllListeners(socket);
       }
-      
+
       currentNoteId = noteId;
       set({ socket, noteId, isConnected: socket.connected });
-      
-      if (socket.connected) {
-        socket.emit('joinNote', noteId);
-      }
-      
+
       const setupListeners = () => {
         // Remove any existing listeners before adding new ones (defensive)
         removeAllListeners(socket);
-        
+
         socket.on('connect', () => {
           set({ isConnected: true });
           socket.emit('joinNote', noteId);
         });
-        
+
         socket.on('disconnect', () => {
           set({ isConnected: false });
         });
-        
+
         socket.on('userJoined', (data) => {
+          console.log('[Socket] userJoined event received:', data);
           get().handleUserJoined(data);
         });
-        
+
         socket.on('userLeft', (data) => {
+          console.log('[Socket] userLeft event received:', data);
           get().handleUserLeft(data);
         });
-        
+
         socket.on('userTyping', (data) => {
           get().handleUserTyping(data);
         });
-        
+
         socket.on('userStoppedTyping', (data) => {
           get().handleUserStoppedTyping(data);
         });
-        
+
         socket.on('operationApplied', (data) => {
           get().handleOperationApplied(data);
         });
-        
+
         socket.on('noteUpdated', (data) => {
           get().handleNoteUpdated(data);
         });
-        
+
         socket.on('cursorMoved', (data) => {
           get().handleCursorMoved(data);
         });
-        
+
         socket.on('cursorRemoved', (data: { userId: string; timestamp: number }) => {
           const { cursorPositions } = get();
           const newCursors = new Map(cursorPositions);
           newCursors.delete(data.userId);
           set({ cursorPositions: newCursors });
         });
-        
+
         socket.on('noteData', (data) => {
           get().handleNoteData(data);
         });
-        
+
         listenersSetup = true;
       };
-      
+
       if (socket.connected) {
+        // CRITICAL: Set up listeners FIRST, then emit joinNote
+        // This prevents the race condition where userJoined event is missed
         setupListeners();
+        // Now emit joinNote AFTER listeners are ready
+        socket.emit('joinNote', noteId);
+        console.log('[Socket] Emitted joinNote for:', noteId);
       } else {
         // Remove any existing connect handler before adding new one
         if (connectOnceHandler) {
@@ -331,23 +341,36 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         socket.once('connect', connectOnceHandler);
       }
     },
-    
+
     cleanupSocket: () => {
       const { socket, noteId } = get();
-      
-      if (socket) {
-        removeAllListeners(socket);
-        
-        if (noteId) {
-          socket.emit('leaveNote', noteId);
-        }
+
+      // Debounce cleanup to handle React Strict Mode double-mount
+      // If reinitializeSocket is called within 150ms, cleanup will be cancelled
+      if (cleanupTimeout) {
+        clearTimeout(cleanupTimeout);
       }
-      
-      eventDeduplicator.clear();
-      currentNoteId = null;
-      set({ socket: null, isConnected: false, noteId: null });
+
+      cleanupTimeout = setTimeout(() => {
+        console.log('[Socket] Executing cleanup for noteId:', noteId);
+
+        if (socket) {
+          removeAllListeners(socket);
+
+          if (noteId) {
+            socket.emit('leaveNote', noteId);
+          }
+        }
+
+        currentNoteId = null;
+        listenersSetup = false;
+        cleanupTimeout = null;
+        // Don't clear activeUsers - let server events drive state updates
+        // Only clear local connection state
+        set({ noteId: null });
+      }, 150);
     },
-    
+
     // Emit operation
     emitOperation: (operation: Operation) => {
       const { socket, noteId } = get();
@@ -355,21 +378,21 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         socket.emit('applyOperation', noteId, operation);
       }
     },
-    
+
     // Emit cursor move (throttled)
     emitCursorMove: (position: number) => {
       const { socket, noteId, note } = get();
       if (!socket || !noteId) return;
-      
+
       // Throttle cursor updates (max 10 per second)
       if (cursorUpdateTimer) {
         clearTimeout(cursorUpdateTimer);
       }
-      
+
       cursorUpdateTimer = setTimeout(() => {
         const userId = note?.userId || useAuthStore.getState().user?._id || '';
         const userFullname = useAuthStore.getState().user?.fullname || 'Unknown';
-        
+
         socket.emit('cursorMove', noteId, {
           userId,
           userFullname,
@@ -378,22 +401,22 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         });
       }, 100);
     },
-    
+
     emitTypingStart: () => {
       const { socket, noteId, isConnected } = get();
       if (!socket || !noteId || !isConnected) return;
-      
+
       socket.emit('typingStart', noteId);
-      
+
       if (typingTimeout) {
         clearTimeout(typingTimeout);
       }
-      
+
       typingTimeout = setTimeout(() => {
         get().emitTypingStop();
       }, 2000);
     },
-    
+
     // Emit typing stop
     emitTypingStop: () => {
       const { socket, noteId } = get();
@@ -405,119 +428,96 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         typingTimeout = null;
       }
     },
-    
+
     handleUserJoined: (data) => {
       const { noteId } = get();
       const currentUserId = useAuthStore.getState().user?._id?.toString();
       const joiningUserId = data.user.userId?.toString();
-      
-      if (!joiningUserId || !noteId) return;
-      
-      // Event deduplication: process each unique event only once
-      // Use activeUsers array hash to detect actual state changes
-      const activeUsersHash = JSON.stringify(data.activeUsers);
-      const eventSignature = getEventSignature('userJoined', joiningUserId, noteId);
-      const stateSignature = `${eventSignature}:${activeUsersHash}`;
-      
-      if (eventDeduplicator.isDuplicate(stateSignature)) {
-        return;
-      }
-      
+
+      if (!joiningUserId) return;
+
       // Trust server-provided activeUsers list completely
-      // Backend is the single source of truth and includes all users
-      const { activeUsers: currentActiveUsers } = get();
+      // Backend is the single source of truth
       const serverActiveUsers = [...data.activeUsers];
-      
-      // Only update state if it actually changed (idempotent check)
-      const usersChanged = JSON.stringify(currentActiveUsers) !== JSON.stringify(serverActiveUsers);
-      if (usersChanged) {
-        set({ activeUsers: serverActiveUsers });
-      }
-      
-      // Show toast only for other users (not self)
+
+      console.log('[handleUserJoined] Setting activeUsers to:', serverActiveUsers);
+      set({ activeUsers: serverActiveUsers });
+
+      // Show toast only for other users (not self), with ID to prevent duplicates
       if (joiningUserId !== currentUserId) {
-        console.log(`User joined note: ${data.user.fullname} (${joiningUserId})`);
-        toast.success(`${data.user.fullname} joined the note`, { duration: 2000 });
+        toast.success(`${data.user.fullname} joined the note`, {
+          id: `user-joined-${joiningUserId}`, // Sonner deduplicates by ID
+          duration: 2000
+        });
       }
     },
-    
+
     handleUserLeft: (data) => {
-      const { noteId, activeUsers: currentActiveUsers, cursorPositions: currentCursors } = get();
+      const { cursorPositions: currentCursors } = get();
       const currentUserId = useAuthStore.getState().user?._id?.toString();
       const leavingUserId = data.user.userId?.toString();
-      
-      if (!leavingUserId || !noteId) return;
-      
-      // Event deduplication: process each unique event only once
-      // Use activeUsers array hash to detect actual state changes
-      const activeUsersHash = JSON.stringify(data.activeUsers);
-      const eventSignature = getEventSignature('userLeft', leavingUserId, noteId);
-      const stateSignature = `${eventSignature}:${activeUsersHash}`;
-      
-      if (eventDeduplicator.isDuplicate(stateSignature)) {
-        return;
-      }
-      
+
+      if (!leavingUserId) return;
+
       // Trust server-provided activeUsers list completely
-      // Backend is the single source of truth and includes all remaining users
+      // Backend is the single source of truth
       const serverActiveUsers = [...data.activeUsers];
-      
-      // Only update state if it actually changed (idempotent check)
-      const usersChanged = JSON.stringify(currentActiveUsers) !== JSON.stringify(serverActiveUsers);
-      if (usersChanged) {
-        set({ activeUsers: serverActiveUsers });
-      }
-      
-      // Remove cursor for leaving user (idempotent - safe to call multiple times)
+
+      console.log('[handleUserLeft] Setting activeUsers to:', serverActiveUsers);
+      set({ activeUsers: serverActiveUsers });
+
+      // Remove cursor for leaving user
       if (currentCursors.has(leavingUserId)) {
         const newCursors = new Map(currentCursors);
         newCursors.delete(leavingUserId);
         set({ cursorPositions: newCursors });
       }
-      
-      // Show toast only for other users (not self)
+
+      // Show toast only for other users (not self), with ID to prevent duplicates
       if (leavingUserId !== currentUserId) {
-        console.log(`User left note: ${data.user.fullname} (${leavingUserId})`);
-        toast.info(`${data.user.fullname} left the note`, { duration: 2000 });
+        toast.info(`${data.user.fullname} left the note`, {
+          id: `user-left-${leavingUserId}`,
+          duration: 2000
+        });
       }
     },
-    
+
     handleUserTyping: (data) => {
       const currentUserId = useAuthStore.getState().user?._id?.toString();
       if (data.userId?.toString() === currentUserId) return;
-      
+
       set((state) => {
         const filtered = state.typingUsers.filter((u) => u.userId !== data.userId);
         return { typingUsers: [...filtered, data] };
       });
     },
-    
+
     handleUserStoppedTyping: (data) => {
       set((state) => ({
         typingUsers: state.typingUsers.filter((u) => u.userId !== data.userId),
       }));
     },
-    
+
     handleOperationApplied: (data) => {
       // Reserved for future HTML-aware operation support
       if (data.updatedContent !== undefined && data.updatedContent !== null) {
         const { content: currentContent } = get();
         if (data.updatedContent !== currentContent) {
-          set({ 
-            content: data.updatedContent, 
-            previousContent: data.updatedContent 
+          set({
+            content: data.updatedContent,
+            previousContent: data.updatedContent
           });
         }
       }
     },
-    
+
     handleNoteUpdated: (data) => {
       const { content: currentContent, previousContent: currentPreviousContent } = get();
-      
+
       if (data.title !== undefined && data.title !== null) {
         set({ title: data.title });
       }
-      
+
       // Sync content from server (single source of truth for real-time collaboration)
       if (data.content !== undefined && data.content !== null) {
         if (data.content !== currentContent) {
@@ -526,7 +526,7 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
           set({ previousContent: data.content });
         }
       }
-      
+
       if (data.description !== undefined && data.description !== null) {
         set({ description: data.description });
       }
@@ -534,11 +534,11 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         set({ tags: data.tags });
       }
     },
-    
+
     handleCursorMoved: (data) => {
       const currentUserId = useAuthStore.getState().user?._id?.toString();
       if (data.userId?.toString() === currentUserId) return;
-      
+
       set((state) => {
         const newCursors = new Map(state.cursorPositions);
         newCursors.set(data.userId, {
@@ -550,7 +550,7 @@ export const useNoteEditingStore = create<NoteEditingState>((set, get) => {
         return { cursorPositions: newCursors };
       });
     },
-    
+
     handleNoteData: (data) => {
       // Initial note data when joining
       get().setNote(data);

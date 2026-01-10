@@ -21,5 +21,18 @@ export interface Note {
     email: string;
     fullname: string;
   }>;
+  settings?: {
+    notifications: {
+      joinLeave: boolean;
+      collaboratorChanges: boolean;
+      liveEdits: boolean;
+      cursorMoves: boolean;
+    };
+    realTime: {
+      showCursors: boolean;
+      showSelections: boolean;
+      showPresence: boolean;
+    };
+  };
 }
 

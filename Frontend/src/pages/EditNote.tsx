@@ -30,7 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Pin, Users, Plus, X, MoreVertical, Trash2, History } from 'lucide-react';
+import { ArrowLeft, Pin, Users, Plus, X, MoreVertical, Trash2, History, Settings } from 'lucide-react';
 import { useNote, useUpdateNote, useTogglePinNote, useAddCollaborator, useRemoveCollaborator, useDeleteNote } from '@/hooks/api/useNotes';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -39,6 +39,7 @@ import { ActiveUsers } from '@/components/features/notes/ActiveUsers';
 import { VersionHistory } from '@/components/features/notes/VersionHistory';
 import { NoteMetadata } from '@/components/features/notes/NoteMetadata';
 import { EditorStats } from '@/components/features/notes/EditorStats';
+import { NoteSettings } from '@/components/features/notes/NoteSettings';
 import { useAuthStore } from '@/stores/auth.store';
 import { useNoteEditingStore } from '@/stores/noteEditing.store';
 import { useDebouncedCallback } from 'use-debounce';
@@ -50,6 +51,7 @@ export default function EditNote() {
   const [collaboratorEmail, setCollaboratorEmail] = useState('');
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const [showSettingsDialog, setShowSettingsDialog] = useState(false);
   const isSavingRef = useRef(false);
   const previousSaveDataRef = useRef<{ title: string; content: string; description: string; tags: string[] } | null>(null);
 
@@ -156,28 +158,28 @@ export default function EditNote() {
     if (!noteId || isSavingRef.current) return;
 
     const currentData = { title, content, description, tags };
-    
+
     // Skip if data hasn't changed
     if (previousSaveDataRef.current) {
-      const hasChanged = 
+      const hasChanged =
         previousSaveDataRef.current.title !== currentData.title ||
         previousSaveDataRef.current.content !== currentData.content ||
         previousSaveDataRef.current.description !== currentData.description ||
         JSON.stringify(previousSaveDataRef.current.tags) !== JSON.stringify(currentData.tags);
-      
+
       if (!hasChanged) {
         return;
       }
     }
 
     isSavingRef.current = true;
-    
+
     try {
       await updateNoteMutation.mutateAsync({
         noteId,
         ...currentData,
       });
-      
+
       previousSaveDataRef.current = currentData;
     } catch (error) {
       toast.error('Failed to autosave note');
@@ -205,12 +207,12 @@ export default function EditNote() {
     if (noteId && note && previousSaveDataRef.current) {
       // Check if data actually changed
       const currentData = { title, content, description, tags };
-      const hasChanged = 
+      const hasChanged =
         previousSaveDataRef.current.title !== currentData.title ||
         previousSaveDataRef.current.content !== currentData.content ||
         previousSaveDataRef.current.description !== currentData.description ||
         JSON.stringify(previousSaveDataRef.current.tags) !== JSON.stringify(currentData.tags);
-      
+
       if (hasChanged) {
         debouncedAutosave();
       }
@@ -412,12 +414,18 @@ export default function EditNote() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {noteId && (
-                    <DropdownMenuItem onClick={() => setShowVersionHistory(true)}>
-                      <History className="mr-2 h-4 w-4" />
-                      Version History
-                    </DropdownMenuItem>
+                    <>
+                      <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowVersionHistory(true)}>
+                        <History className="mr-2 h-4 w-4" />
+                        Version History
+                      </DropdownMenuItem>
+                    </>
                   )}
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => setShowDeleteDialog(true)}
                     className="text-destructive focus:text-destructive"
                   >
@@ -437,44 +445,44 @@ export default function EditNote() {
           <div className="lg:col-span-3 space-y-6">
             {/* Typing Indicator */}
             <TypingIndicator typingUsers={typingUsers} />
-            
+
             {/* Editor Stats */}
             <EditorStats content={content} />
-            
+
             {/* Tags */}
-        <div className="mb-6 space-y-2">
-          <div className="flex flex-wrap gap-2 items-center">
-            {tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="gap-2">
-                {tag}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveTag(tag)}
-                  className="ml-1 h-5 w-5 p-0 hover:bg-destructive/20 rounded-full"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            ))}
-            <div className="flex gap-2 items-center">
-              <Input
-                placeholder="Add tag"
-                value={newTag}
-                onChange={(e) => setNewTag(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleAddTag();
-                  }
-                }}
-                className="w-32 h-8"
-              />
-              <Button size="sm" onClick={handleAddTag}>
-                <Plus className="h-4 w-4" />
-              </Button>
+            <div className="mb-6 space-y-2">
+              <div className="flex flex-wrap gap-2 items-center">
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="gap-2">
+                    {tag}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="ml-1 h-5 w-5 p-0 hover:bg-destructive/20 rounded-full"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+                <div className="flex gap-2 items-center">
+                  <Input
+                    placeholder="Add tag"
+                    value={newTag}
+                    onChange={(e) => setNewTag(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddTag();
+                      }
+                    }}
+                    className="w-32 h-8"
+                  />
+                  <Button size="sm" onClick={handleAddTag}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
             {/* Editor */}
             <motion.div
@@ -518,16 +526,14 @@ export default function EditNote() {
           {/* Sidebar - Note Metadata */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-6">
-              {/* Active Users */}
-              {activeUsers.length > 0 && (
-                <div className="p-4 rounded-lg border border-border/50 bg-card">
-                  <ActiveUsers users={activeUsers} currentUserId={user?._id} />
-                </div>
-              )}
-              
-              <NoteMetadata 
-                note={note} 
-                content={content} 
+              {/* Active Users - Always visible */}
+              <div className="p-4 rounded-lg border border-border/50 bg-card">
+                <ActiveUsers users={activeUsers} currentUserId={user?._id} />
+              </div>
+
+              <NoteMetadata
+                note={note}
+                content={content}
                 description={description}
                 onDescriptionChange={updateDescription}
                 onDescriptionSave={(newDescription) => {
@@ -541,11 +547,31 @@ export default function EditNote() {
         </div>
       </div>
 
+      {/* Settings Dialog */}
+      {noteId && (
+        <Dialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-2xl">
+                <Settings className="h-5 w-5" />
+                Note Settings
+              </DialogTitle>
+              <DialogDescription className="text-base">
+                Configure notification and collaboration settings for this note. Each note can have different settings.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="mt-2">
+              <NoteSettings note={note} noteId={noteId} />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Version History Dialog */}
       {noteId && (
-        <VersionHistory 
-          noteId={noteId} 
-          open={showVersionHistory} 
+        <VersionHistory
+          noteId={noteId}
+          open={showVersionHistory}
           onOpenChange={setShowVersionHistory}
         />
       )}

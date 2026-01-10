@@ -63,6 +63,20 @@ const noteSchema = new Schema({
     text: { type: String, default: '' },
     author: { type: String, default: '' }
   },
+  // Note-specific settings for notifications and real-time collaboration
+  settings: {
+    notifications: {
+      joinLeave: { type: Boolean, default: true },
+      collaboratorChanges: { type: Boolean, default: true },
+      liveEdits: { type: Boolean, default: true },
+      cursorMoves: { type: Boolean, default: true }
+    },
+    realTime: {
+      showCursors: { type: Boolean, default: true },
+      showSelections: { type: Boolean, default: true },
+      showPresence: { type: Boolean, default: true }
+    }
+  },
   // Phase 1: Enhanced real-time collaboration fields
   cursorPositions: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: "user" },

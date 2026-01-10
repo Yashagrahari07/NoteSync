@@ -127,7 +127,7 @@ export default function Home() {
               </div>
               <div className="flex gap-2">
                 <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="w-[145px]">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>

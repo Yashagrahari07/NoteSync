@@ -1,6 +1,5 @@
 const NoteService = require('../../services/note.service');
 const UserModel = require('../../models/user.model');
-const UserPreferencesService = require('../../services/userPreferences.service');
 const { socketRateLimit } = require('../middleware/rateLimit.middleware');
 
 module.exports.handleJoinNote = async (socket, noteId, activeUsers, io) => {
@@ -32,8 +31,6 @@ module.exports.handleJoinNote = async (socket, noteId, activeUsers, io) => {
       userId: socket.userId,
     });
 
-    const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
-
     const activeUsersList = activeUsers[noteIdStr].map((u) => ({
       fullname: u.fullname,
       userId: u.userId.toString(),
@@ -56,8 +53,25 @@ module.exports.handleJoinNote = async (socket, noteId, activeUsers, io) => {
     io.to(noteIdStr).emit('userJoined', eventData);
     console.log(`Emitted userJoined to room ${noteIdStr} with ${activeUsersList.length} active users: ${activeUsersList.map(u => u.fullname).join(', ')}`);
 
+    const note = await NoteService.getNoteById(noteId, socket.userId);
+    
+    // Get note settings (with defaults if not present)
+    const noteSettings = note?.settings || {
+      notifications: {
+        joinLeave: true,
+        collaboratorChanges: true,
+        liveEdits: true,
+        cursorMoves: true
+      },
+      realTime: {
+        showCursors: true,
+        showSelections: true,
+        showPresence: true
+      }
+    };
+
     // Also send notification to other users (not the joining user)
-    if (preferences.notifications.joinLeave) {
+    if (noteSettings.notifications.joinLeave) {
       socket.to(noteIdStr).emit('notification', {
         type: 'userJoined',
         message: `${user.fullname} joined the note`,
@@ -66,8 +80,6 @@ module.exports.handleJoinNote = async (socket, noteId, activeUsers, io) => {
         timestamp: Date.now()
       });
     }
-
-    const note = await NoteService.getNoteById(noteId, socket.userId);
     if (note) {
       socket.emit('noteData', note);
     }
@@ -111,7 +123,20 @@ module.exports.handleEditNote = async (socket, noteId, updatedFields, io) => {
       return;
     }
 
-    const preferences = await UserPreferencesService.getUserPreferences(socket.userId);
+    // Get note settings (with defaults if not present)
+    const noteSettings = updatedNote?.settings || {
+      notifications: {
+        joinLeave: true,
+        collaboratorChanges: true,
+        liveEdits: true,
+        cursorMoves: true
+      },
+      realTime: {
+        showCursors: true,
+        showSelections: true,
+        showPresence: true
+      }
+    };
 
     // Emit liveEdit to other users only
     socket.to(noteIdStr).emit('liveEdit', {
@@ -120,7 +145,7 @@ module.exports.handleEditNote = async (socket, noteId, updatedFields, io) => {
       timestamp: Date.now()
     });
 
-    if (preferences.notifications.liveEdits) {
+    if (noteSettings.notifications.liveEdits) {
       socket.to(noteIdStr).emit('notification', {
         type: 'liveEdit',
         message: `${user.fullname} is editing the note`,

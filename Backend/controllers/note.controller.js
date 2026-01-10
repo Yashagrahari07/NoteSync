@@ -149,6 +149,18 @@ const searchNotes = async (req, res) => {
   }
 };
 
+const updateNoteSettings = async (req, res) => {
+  try {
+    const { id: noteId } = req.params;
+    const { settings } = req.body;
+
+    const updatedNote = await NoteService.updateNoteSettings(noteId, req.user._id, settings);
+    res.status(200).json({ success: true, data: updatedNote });
+  } catch (err) {
+    res.status(500).json({ success: false, error: { message: err.message } });
+  }
+};
+
 module.exports = {
   createNote,
   getAllNotes,
@@ -159,4 +171,5 @@ module.exports = {
   removeCollaborator,
   togglePinNote,
   searchNotes,
+  updateNoteSettings,
 };

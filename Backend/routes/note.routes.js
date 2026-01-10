@@ -24,4 +24,6 @@ router.delete("/:id/collaborators/:collaboratorId", noteController.removeCollabo
 
 router.patch("/:id/pin", noteLimiter, noteController.togglePinNote);
 
+router.put("/:id/settings", noteLimiter, noteController.updateNoteSettings);
+
 module.exports = router;

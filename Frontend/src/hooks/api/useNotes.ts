@@ -180,3 +180,33 @@ export const useRemoveCollaborator = () => {
   });
 };
 
+interface NoteSettings {
+  notifications: {
+    joinLeave: boolean;
+    collaboratorChanges: boolean;
+    liveEdits: boolean;
+    cursorMoves: boolean;
+  };
+  realTime: {
+    showCursors: boolean;
+    showSelections: boolean;
+    showPresence: boolean;
+  };
+}
+
+export const useUpdateNoteSettings = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation<Note, Error, { noteId: string; settings: Partial<NoteSettings> }>({
+    mutationFn: async ({ noteId, settings }) => {
+      const data = await apiClient.put<ApiResponse<Note>>(`/notes/${noteId}/settings`, { settings });
+      if (!data.data) throw new Error('Failed to update note settings');
+      return data.data;
+    },
+    onSuccess: (updatedNote, variables) => {
+      queryClient.setQueryData(['notes', variables.noteId], updatedNote);
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+    },
+  });
+};
+

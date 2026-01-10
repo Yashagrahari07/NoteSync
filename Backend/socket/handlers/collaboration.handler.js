@@ -1,0 +1,152 @@
+const UserModel = require('../../models/user.model');
+const NoteService = require('../../services/note.service');
+const { socketRateLimit } = require('../middleware/rateLimit.middleware');
+
+module.exports.handleTypingStart = async (socket, noteId, io) => {
+  const rateLimit = socketRateLimit(socket, 'typingStart');
+  if (!rateLimit.allowed) {
+    return;
+  }
+
+  try {
+    const noteIdStr = noteId.toString();
+    
+    // Ensure socket is in the room
+    const rooms = Array.from(socket.rooms);
+    if (!rooms.includes(noteIdStr)) {
+      socket.join(noteIdStr);
+    }
+
+    const user = await UserModel.findById(socket.userId);
+    if (!user) return;
+
+    socket.to(noteIdStr).emit('userTyping', {
+      userId: socket.userId.toString(),
+      userFullname: user.fullname,
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error handling typing start:', error);
+  }
+};
+
+module.exports.handleTypingStop = async (socket, noteId, io) => {
+  const rateLimit = socketRateLimit(socket, 'typingStop');
+  if (!rateLimit.allowed) {
+    return;
+  }
+
+  try {
+    const noteIdStr = noteId.toString();
+    
+    // Ensure socket is in the room
+    const rooms = Array.from(socket.rooms);
+    if (!rooms.includes(noteIdStr)) {
+      socket.join(noteIdStr);
+    }
+
+    socket.to(noteIdStr).emit('userStoppedTyping', {
+      userId: socket.userId.toString(),
+      timestamp: Date.now()
+    });
+  } catch (error) {
+    console.error('Error handling typing stop:', error);
+  }
+};
+
+module.exports.handleCollaboratorAdded = async (socket, noteId, collaboratorData, io) => {
+  try {
+    const noteIdStr = noteId.toString();
+    
+    const note = await NoteService.getNoteById(noteId, socket.userId);
+    if (!note) {
+      socket.emit('error', { message: 'Note not found' });
+      return;
+    }
+
+    const user = await UserModel.findById(socket.userId);
+    if (!user) return;
+
+    // Get note settings (with defaults if not present)
+    const noteSettings = note?.settings || {
+      notifications: {
+        joinLeave: true,
+        collaboratorChanges: true,
+        liveEdits: true,
+        cursorMoves: true
+      },
+      realTime: {
+        showCursors: true,
+        showSelections: true,
+        showPresence: true
+      }
+    };
+
+    io.to(noteIdStr).emit('collaboratorAdded', {
+      note: note,
+      collaborator: collaboratorData,
+      timestamp: Date.now()
+    });
+
+    if (noteSettings.notifications.collaboratorChanges) {
+      io.to(noteIdStr).emit('notification', {
+        type: 'collaboratorAdded',
+        message: `${collaboratorData.fullname} was added as a collaborator`,
+        userId: collaboratorData.userId,
+        userFullname: collaboratorData.fullname,
+        timestamp: Date.now()
+      });
+    }
+  } catch (error) {
+    socket.emit('error', { message: 'Error handling collaborator addition' });
+  }
+};
+
+module.exports.handleCollaboratorRemoved = async (socket, noteId, collaboratorData, io) => {
+  try {
+    const noteIdStr = noteId.toString();
+    
+    const note = await NoteService.getNoteById(noteId, socket.userId);
+    if (!note) {
+      socket.emit('error', { message: 'Note not found' });
+      return;
+    }
+
+    const user = await UserModel.findById(socket.userId);
+    if (!user) return;
+
+    // Get note settings (with defaults if not present)
+    const noteSettings = note?.settings || {
+      notifications: {
+        joinLeave: true,
+        collaboratorChanges: true,
+        liveEdits: true,
+        cursorMoves: true
+      },
+      realTime: {
+        showCursors: true,
+        showSelections: true,
+        showPresence: true
+      }
+    };
+
+    io.to(noteIdStr).emit('collaboratorRemoved', {
+      note: note,
+      collaborator: collaboratorData,
+      timestamp: Date.now()
+    });
+
+    if (noteSettings.notifications.collaboratorChanges) {
+      io.to(noteIdStr).emit('notification', {
+        type: 'collaboratorRemoved',
+        message: `${collaboratorData.fullname} was removed as a collaborator`,
+        userId: collaboratorData.userId,
+        userFullname: collaboratorData.fullname,
+        timestamp: Date.now()
+      });
+    }
+  } catch (error) {
+    socket.emit('error', { message: 'Error handling collaborator removal' });
+  }
+};
+

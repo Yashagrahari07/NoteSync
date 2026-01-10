@@ -14,15 +14,17 @@ class NotificationService {
   static async getUserNotifications(userId, limit = 50, skip = 0) {
     try {
       const notifications = await NotificationModel.find({ userId })
+        .select('type title message noteId noteTitle noteOwner invitationId isRead createdAt')
         .sort({ createdAt: -1 })
         .limit(limit)
-        .skip(skip);
-      
-      const unreadCount = await NotificationModel.countDocuments({ 
-        userId, 
-        isRead: false 
+        .skip(skip)
+        .lean();
+
+      const unreadCount = await NotificationModel.countDocuments({
+        userId,
+        isRead: false
       });
-      
+
       return { notifications, unreadCount };
     } catch (error) {
       throw new Error('Error fetching notifications');
@@ -35,7 +37,9 @@ class NotificationService {
         { _id: notificationId, userId },
         { isRead: true },
         { new: true }
-      );
+      )
+        .select('type title message noteId noteTitle noteOwner invitationId isRead createdAt')
+        .lean();
       return notification;
     } catch (error) {
       throw new Error('Error marking notification as read');
@@ -68,9 +72,9 @@ class NotificationService {
 
   static async getUnreadCount(userId) {
     try {
-      const count = await NotificationModel.countDocuments({ 
-        userId, 
-        isRead: false 
+      const count = await NotificationModel.countDocuments({
+        userId,
+        isRead: false
       });
       return count;
     } catch (error) {
@@ -82,7 +86,7 @@ class NotificationService {
   static async createCollaboratorNotification(type, noteId, noteTitle, noteOwner, targetUserId, actionUser) {
     try {
       let title, message;
-      
+
       if (type === 'collaboratorAdded') {
         title = 'Added to Note';
         message = `${actionUser.fullname} added you as a collaborator`;

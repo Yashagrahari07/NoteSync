@@ -5,12 +5,13 @@ import type { ApiResponse } from '@/types/api.types';
 export interface Notification {
   _id: string;
   userId: string;
-  type: string;
+  type: 'collaboratorAdded' | 'collaboratorRemoved' | 'noteShared' | 'noteUpdated' | 'collaborationInvite';
   title: string;
   message: string;
   noteId?: string;
   noteTitle?: string;
   noteOwner?: string;
+  invitationId?: string;
   isRead: boolean;
   createdAt: string;
 }
@@ -18,6 +19,12 @@ export interface Notification {
 interface NotificationsResponse {
   notifications: Notification[];
   unreadCount: number;
+}
+
+interface InvitationResponse {
+  message: string;
+  noteId?: string;
+  noteTitle?: string;
 }
 
 export const useNotifications = () => {
@@ -32,7 +39,7 @@ export const useNotifications = () => {
 
 export const useMarkNotificationRead = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation<void, Error, string>({
     mutationFn: async (notificationId: string) => {
       await apiClient.patch(`/notifications/${notificationId}/read`);
@@ -45,7 +52,7 @@ export const useMarkNotificationRead = () => {
 
 export const useMarkAllNotificationsRead = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation<void, Error, void>({
     mutationFn: async () => {
       await apiClient.patch('/notifications/mark-all-read');
@@ -70,7 +77,7 @@ export const useUnreadCount = () => {
 
 export const useDeleteNotification = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation<void, Error, string>({
     mutationFn: async (notificationId: string) => {
       await apiClient.delete(`/notifications/${notificationId}`);
@@ -81,4 +88,36 @@ export const useDeleteNotification = () => {
     },
   });
 };
+
+export const useAcceptInvitation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<InvitationResponse, Error, string>({
+    mutationFn: async (invitationId: string) => {
+      const data = await apiClient.post<ApiResponse<InvitationResponse>>(`/invitations/${invitationId}/accept`);
+      return data.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+      queryClient.invalidateQueries({ queryKey: ['notes'] });
+    },
+  });
+};
+
+export const useRejectInvitation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<{ message: string }, Error, string>({
+    mutationFn: async (invitationId: string) => {
+      const data = await apiClient.post<ApiResponse<{ message: string }>>(`/invitations/${invitationId}/reject`);
+      return data.data!;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['unreadCount'] });
+    },
+  });
+};
+
 

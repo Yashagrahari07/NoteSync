@@ -3,37 +3,41 @@ const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
 const notificationSchema = new Schema({
-  userId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: "user", 
-    required: true 
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "user",
+    required: true
   },
-  type: { 
-    type: String, 
-    enum: ['collaboratorAdded', 'collaboratorRemoved', 'noteShared', 'noteUpdated'], 
-    required: true 
+  type: {
+    type: String,
+    enum: ['collaboratorAdded', 'collaboratorRemoved', 'noteShared', 'noteUpdated', 'collaborationInvite'],
+    required: true
   },
-  title: { 
-    type: String, 
-    required: true 
+  invitationId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "pendingInvitation"
   },
-  message: { 
-    type: String, 
-    required: true 
+  title: {
+    type: String,
+    required: true
   },
-  noteId: { 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: "note" 
+  message: {
+    type: String,
+    required: true
   },
-  noteTitle: { 
-    type: String 
+  noteId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "note"
   },
-  noteOwner: { 
-    type: String 
+  noteTitle: {
+    type: String
   },
-  isRead: { 
-    type: Boolean, 
-    default: false 
+  noteOwner: {
+    type: String
+  },
+  isRead: {
+    type: Boolean,
+    default: false
   },
   createdAt: {
     type: Date,

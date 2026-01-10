@@ -264,10 +264,10 @@ export default function EditNote() {
         noteId,
         email: collaboratorEmail.trim(),
       });
-      toast.success('Collaborator added successfully');
+      toast.success('Invitation sent successfully');
       setCollaboratorEmail('');
     } catch (error: any) {
-      toast.error(error?.message || 'Failed to add collaborator');
+      toast.error(error?.message || 'Failed to send invitation');
     }
   };
 
@@ -356,16 +356,25 @@ export default function EditNote() {
                   <Button variant="outline" size="sm">
                     <Users className="h-4 w-4 mr-2" />
                     Share
+                    {note.collaborators && note.collaborators.length > 0 && (
+                      <span className="ml-1.5 bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-full">
+                        {note.collaborators.length}
+                      </span>
+                    )}
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="sm:max-w-md">
                   <DialogHeader>
-                    <DialogTitle>Add Collaborator</DialogTitle>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-primary" />
+                      Share & Collaborate
+                    </DialogTitle>
                     <DialogDescription>
-                      Enter the email address of the person you want to share this note with.
+                      Invite people to collaborate on this note. They'll receive an invitation to accept.
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
+                    {/* Invite form */}
                     <div className="flex gap-2">
                       <Input
                         type="email"
@@ -377,30 +386,65 @@ export default function EditNote() {
                             handleAddCollaborator();
                           }
                         }}
+                        className="flex-1"
                       />
-                      <Button onClick={handleAddCollaborator}>Add</Button>
+                      <Button
+                        onClick={handleAddCollaborator}
+                        disabled={!collaboratorEmail.trim() || addCollaboratorMutation.isPending}
+                      >
+                        {addCollaboratorMutation.isPending ? 'Sending...' : 'Invite'}
+                      </Button>
                     </div>
+
+                    {/* Collaborators list */}
                     {note.collaborators && note.collaborators.length > 0 && (
                       <div className="space-y-2">
-                        <p className="text-sm font-medium text-foreground">Collaborators:</p>
-                        <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-foreground">
+                            Collaborators ({note.collaborators.length})
+                          </p>
+                        </div>
+                        <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
                           {note.collaborators.map((collab) => (
-                            <div key={collab.userId} className="flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors">
-                              <div className="text-sm text-foreground">
-                                <span className="font-medium">{collab.fullname}</span>
-                                <span className="text-muted-foreground ml-2">({collab.email})</span>
+                            <div
+                              key={collab.userId}
+                              className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <span className="text-sm font-medium text-primary">
+                                    {collab.fullname?.charAt(0)?.toUpperCase() || '?'}
+                                  </span>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium text-foreground truncate">
+                                    {collab.fullname}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {collab.email}
+                                  </p>
+                                </div>
                               </div>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveCollaborator(collab.userId, collab.fullname)}
-                                className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Empty state */}
+                    {(!note.collaborators || note.collaborators.length === 0) && (
+                      <div className="text-center py-6 text-muted-foreground">
+                        <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No collaborators yet</p>
+                        <p className="text-xs">Invite someone to start collaborating</p>
                       </div>
                     )}
                   </div>

@@ -1,6 +1,8 @@
 const Note = require("../models/note.model");
 const userModel = require("../models/user.model");
 const NotificationService = require("./notification.service");
+const PendingInvitation = require("../models/pendingInvitation.model");
+const NotificationModel = require("../models/notification.model");
 
 exports.createNote = async (data, userId) => {
   try {
@@ -35,17 +37,17 @@ exports.createNote = async (data, userId) => {
 };
 
 exports.getAllNotes = async (userId, options = {}) => {
-  const { 
-    page = 1, 
-    limit = 20, 
-    sortBy = 'updatedOn', 
+  const {
+    page = 1,
+    limit = 20,
+    sortBy = 'updatedOn',
     sortOrder = -1,
     filterType = 'all', // 'all' | 'owned' | 'shared'
     isPinned = undefined // boolean | undefined
   } = options;
-  
+
   let query = {};
-  
+
   // Base query based on filterType
   if (filterType === 'owned') {
     // Only notes owned by the user
@@ -62,12 +64,12 @@ exports.getAllNotes = async (userId, options = {}) => {
       $or: [{ userId }, { "collaborators.userId": userId }]
     };
   }
-  
+
   // Add pinned filter if specified
   if (isPinned !== undefined) {
     query.isPinned = isPinned;
   }
-  
+
   return await Note.find(query)
     .select('title content description tags isPinned updatedOn owner collaborators userId quote settings')
     .sort({ [sortBy]: sortOrder })
@@ -77,21 +79,21 @@ exports.getAllNotes = async (userId, options = {}) => {
 };
 
 exports.searchNotes = async (userId, query, filters = {}) => {
-  const { 
-    tags, 
-    dateRange, 
-    ownerId, 
-    collaboratorId, 
-    isPinned, 
-    page = 1, 
-    limit = 20, 
-    sortBy = 'updatedOn', 
+  const {
+    tags,
+    dateRange,
+    ownerId,
+    collaboratorId,
+    isPinned,
+    page = 1,
+    limit = 20,
+    sortBy = 'updatedOn',
     sortOrder = -1,
     filterType = 'all' // 'all' | 'owned' | 'shared'
   } = filters;
-  
+
   let searchQuery = {};
-  
+
   // Base query based on filterType
   if (filterType === 'owned') {
     // Only notes owned by the user
@@ -108,7 +110,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
       $or: [{ userId }, { "collaborators.userId": userId }]
     };
   }
-  
+
   // Text search - add to existing query using $and
   if (query && query.trim()) {
     const textSearch = {
@@ -117,7 +119,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
         { content: { $regex: query.trim(), $options: 'i' } }
       ]
     };
-    
+
     // Combine base query with text search using $and
     const baseQuery = { ...searchQuery };
     searchQuery = {
@@ -127,7 +129,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
       ]
     };
   }
-  
+
   // Tag filtering - add to $and if text search exists, otherwise add directly
   if (tags && tags.length > 0) {
     if (searchQuery.$and) {
@@ -136,7 +138,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
       searchQuery.tags = { $in: tags };
     }
   }
-  
+
   // Date range filtering
   if (dateRange && dateRange.start && dateRange.end) {
     const dateFilter = {
@@ -151,7 +153,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
       searchQuery.updatedOn = dateFilter.updatedOn;
     }
   }
-  
+
   // Owner filtering (only if not already set by filterType)
   if (ownerId && filterType === 'all') {
     if (searchQuery.$and) {
@@ -160,7 +162,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
       searchQuery.userId = ownerId;
     }
   }
-  
+
   // Collaborator filtering (only if not already set by filterType)
   if (collaboratorId && filterType === 'all') {
     if (searchQuery.$and) {
@@ -169,7 +171,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
       searchQuery["collaborators.userId"] = collaboratorId;
     }
   }
-  
+
   // Pinned filtering
   if (isPinned !== undefined) {
     if (searchQuery.$and) {
@@ -178,7 +180,7 @@ exports.searchNotes = async (userId, query, filters = {}) => {
       searchQuery.isPinned = isPinned;
     }
   }
-  
+
   return await Note.find(searchQuery)
     .select('title content description tags isPinned updatedOn owner collaborators userId quote settings')
     .sort({ [sortBy]: sortOrder })
@@ -228,7 +230,7 @@ exports.getNoteById = async (id, userId) => {
 exports.updateNote = async (id, data, userId) => {
   // Remove createdOn from data if present to prevent it from being updated
   const { createdOn, ...updateData } = data;
-  
+
   return await Note.findOneAndUpdate(
     { _id: id, $or: [{ userId }, { "collaborators.userId": userId }] },
     { ...updateData, updatedOn: Date.now() },
@@ -244,16 +246,16 @@ exports.deleteNote = async (id, userId) => {
     _id: id,
     $or: [{ userId }, { "collaborators.userId": userId }]
   });
-  
+
   if (!note) {
     return { error: 'NOT_FOUND', message: 'Note not found' };
   }
-  
+
   // Check if user is the owner (only owners can delete)
   if (note.userId.toString() !== userId.toString()) {
     return { error: 'FORBIDDEN', message: 'You cannot delete this note. Only the owner can delete shared notes.' };
   }
-  
+
   // User is the owner, proceed with deletion
   await note.deleteOne();
   return { success: true };
@@ -263,47 +265,64 @@ exports.addCollaborator = async (noteId, email, userId) => {
   const note = await Note.findOne({ _id: noteId, userId });
   if (!note) throw new Error("Note not found or unauthorized");
 
-  const collaborator = await userModel.findOne({ email });
-  if (!collaborator) throw new Error("Collaborator not found");
+  const invitee = await userModel.findOne({ email });
+  if (!invitee) throw new Error("User not found with this email");
 
-  const isAlreadyCollaborator = note.collaborators.some(
-    (collab) => collab.userId.toString() === collaborator._id.toString()
-  );
-
-  if (isAlreadyCollaborator) throw new Error("User is already a collaborator");
-
-  note.collaborators.push({
-    userId: collaborator._id,
-    email: collaborator.email,
-    fullname: collaborator.fullname,
-  });
-  await note.save();
-
-  // Create notification for the added collaborator
-  try {
-    const actionUser = await userModel.findById(userId);
-    const noteOwner = await userModel.findById(note.userId);
-    
-
-    
-    await NotificationService.createCollaboratorNotification(
-      'collaboratorAdded',
-      noteId,
-      note.title,
-      noteOwner,
-      collaborator._id,
-      actionUser
-    );
-  } catch (error) {
-    console.error('Error creating collaborator notification:', error);
+  // Can't invite yourself
+  if (invitee._id.toString() === userId.toString()) {
+    throw new Error("You cannot invite yourself");
   }
 
+  // Check if already a collaborator
+  const isAlreadyCollaborator = note.collaborators.some(
+    (collab) => collab.userId.toString() === invitee._id.toString()
+  );
+  if (isAlreadyCollaborator) throw new Error("User is already a collaborator");
+
+  // Check if invitation already pending
+  const existingInvitation = await PendingInvitation.findOne({
+    noteId,
+    inviteeId: invitee._id,
+    status: 'pending'
+  });
+  if (existingInvitation) {
+    throw new Error("Invitation already sent to this user");
+  }
+
+  // Get inviter details
+  const inviter = await userModel.findById(userId);
+
+  // Create pending invitation
+  const invitation = await PendingInvitation.create({
+    noteId,
+    noteTitle: note.title,
+    inviterId: userId,
+    inviterName: inviter.fullname,
+    inviterEmail: inviter.email,
+    inviteeId: invitee._id,
+    inviteeEmail: invitee.email,
+    status: 'pending'
+  });
+
+  // Create notification with invitation link
+  await NotificationModel.create({
+    userId: invitee._id,
+    type: 'collaborationInvite',
+    invitationId: invitation._id,
+    title: 'Collaboration Invite',
+    message: `${inviter.fullname} invited you to collaborate`,
+    noteId,
+    noteTitle: note.title,
+    noteOwner: inviter.fullname
+  });
+
   return {
-    ...note.toObject(),
-    collaborators: note.collaborators.map((collab) => ({
-      email: collab.email,
-      fullname: collab.fullname,
-    })),
+    success: true,
+    message: `Invitation sent to ${invitee.fullname}`,
+    invitee: {
+      email: invitee.email,
+      fullname: invitee.fullname
+    }
   };
 };
 
@@ -326,9 +345,9 @@ exports.removeCollaborator = async (noteId, collaboratorId, userId) => {
   try {
     const actionUser = await userModel.findById(userId);
     const noteOwner = await userModel.findById(note.userId);
-    
 
-    
+
+
     await NotificationService.createCollaboratorNotification(
       'collaboratorRemoved',
       noteId,

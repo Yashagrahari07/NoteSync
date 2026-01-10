@@ -35,7 +35,7 @@ app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -92,6 +92,7 @@ app.use('/notes', noteRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/user-preferences', userPreferencesRoutes);
 app.use('/conflict-resolution', conflictResolutionRoutes);
+app.use('/invitations', require('./routes/invitation.routes'));
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

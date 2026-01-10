@@ -1,96 +1,85 @@
-const jwt = require('jsonwebtoken');
-const NoteService = require('./services/note.service');
-const UserModel = require('./models/user.model');
+const { Server } = require('socket.io');
+const { socketAuth } = require('./socket/middleware/auth.middleware');
+const noteHandlers = require('./socket/handlers/note.handler');
+const collaborationHandlers = require('./socket/handlers/collaboration.handler');
+const conflictHandlers = require('./socket/handlers/conflict.handler');
+const cursorHandlers = require('./socket/handlers/cursor.handler');
 
 const activeUsers = {};
 
 module.exports.setupSocket = (server) => {
-  const io = require('socket.io')(server, {
+  const io = new Server(server, {
     cors: {
-      origin: '*',
+      origin: process.env.FRONTEND_URL || 'http://localhost:5173',
       methods: ['GET', 'POST'],
+      credentials: true,
     },
+    transports: ['websocket'],
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    maxHttpBufferSize: 1e6,
+    allowEIO3: false,
+    upgradeTimeout: 10000,
   });
 
+  io.use(socketAuth);
+
   io.on('connection', (socket) => {
-    const token = socket.handshake.auth?.token;
 
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        socket.userId = decoded._id || decoded.id;
-      } catch (err) {
-        socket.emit('error', { message: 'Authentication failed' });
-        socket.disconnect();
-        return;
-      }
-    } else {
-      socket.emit('error', { message: 'Authentication required' });
-      socket.disconnect();
-      return;
-    }
-
-    socket.on('joinNote', async (noteId) => {
-      try {
-        socket.join(noteId);
-
-        const user = await UserModel.findById(socket.userId);
-        if (!user) return;
-
-        if (!activeUsers[noteId]) {
-          activeUsers[noteId] = [];
-        }
-        activeUsers[noteId].push({ fullname: user.fullname, socketId: socket.id });
-
-        io.to(noteId).emit('activeUsers', activeUsers[noteId]);
-
-        const note = await NoteService.getNoteById(noteId, socket.userId);
-        if (note) {
-          socket.emit('noteData', note);
-        }
-      } catch (err) {
-        socket.emit('error', { message: 'Error joining note room' });
-      }
+    socket.on('joinNote', (noteId) => {
+      setImmediate(() => noteHandlers.handleJoinNote(socket, noteId, activeUsers, io));
     });
-
-    socket.on('editNote', async (noteId, updatedFields) => {
-      try {
-        const note = await NoteService.getNoteById(noteId, socket.userId);
-        if (!note) {
-          socket.emit('error', { message: 'Note not found' });
-          return;
-        }
-
-        Object.assign(note, updatedFields);
-        note.updatedOn = Date.now();
-        await note.save();
-
-        io.to(noteId).emit('noteUpdated', note);
-      } catch (err) {
-        socket.emit('error', { message: 'Error updating the note' });
-      }
+    
+    socket.on('editNote', (noteId, updatedFields) => {
+      setImmediate(() => noteHandlers.handleEditNote(socket, noteId, updatedFields, io));
     });
-
+    
     socket.on('leaveNote', (noteId) => {
-      socket.leave(noteId);
+      setImmediate(() => noteHandlers.handleLeaveNote(socket, noteId, activeUsers, io));
+    });
 
-      if (activeUsers[noteId]) {
-        activeUsers[noteId] = activeUsers[noteId].filter(
-          (user) => user.socketId !== socket.id
-        );
 
-        io.to(noteId).emit('activeUsers', activeUsers[noteId]);
-      }
+
+    socket.on('typingStart', (noteId) => {
+      setImmediate(() => collaborationHandlers.handleTypingStart(socket, noteId, io));
+    });
+    
+    socket.on('typingStop', (noteId) => {
+      setImmediate(() => collaborationHandlers.handleTypingStop(socket, noteId, io));
+    });
+
+    socket.on('collaboratorAdded', (noteId, collaboratorData) => {
+      setImmediate(() => collaborationHandlers.handleCollaboratorAdded(socket, noteId, collaboratorData, io));
+    });
+
+    socket.on('collaboratorRemoved', (noteId, collaboratorData) => {
+      setImmediate(() => collaborationHandlers.handleCollaboratorRemoved(socket, noteId, collaboratorData, io));
     });
 
     socket.on('disconnect', () => {
-      for (const noteId in activeUsers) {
-        activeUsers[noteId] = activeUsers[noteId].filter(
-          (user) => user.socketId !== socket.id
-        );
+      noteHandlers.handleDisconnect(socket, activeUsers, io);
+    });
 
-        io.to(noteId).emit('activeUsers', activeUsers[noteId]);
-      }
+    socket.on('applyOperation', (noteId, operation) => {
+      setImmediate(() => conflictHandlers.handleApplyOperation(socket, noteId, operation, io));
+    });
+
+    socket.on('cursorMove', (noteId, cursorData) => {
+      setImmediate(() => cursorHandlers.handleCursorMove(socket, noteId, cursorData, io));
+    });
+
+    socket.on('requestVersionHistory', (noteId) => {
+      setImmediate(() => conflictHandlers.handleRequestVersionHistory(socket, noteId));
+    });
+
+    socket.on('restoreVersion', (noteId, version) => {
+      setImmediate(() => conflictHandlers.handleRestoreVersion(socket, noteId, version, io));
+    });
+
+    socket.on('manualConflictResolution', (noteId, resolution) => {
+      setImmediate(() => conflictHandlers.handleManualConflictResolution(socket, noteId, resolution, io));
     });
   });
+
+  return io;
 };

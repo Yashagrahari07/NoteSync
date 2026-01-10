@@ -1,29 +1,54 @@
-const userModel = require('../models/user.model');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const BlacklistTokenModel = require('../models/blacklistToken.model');
+const UserModel = require('../models/user.model');
+const { verifyAccessToken } = require('../utils/jwt.utils');
 
 module.exports.authUser = async (req, res, next) => {
-    const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
+  try {
+    const token = req.cookies.authToken || 
+                  req.headers.authorization?.split(' ')[1];
+
     if (!token) {
-        return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(401).json({ 
+        message: 'Authentication required',
+        code: 'NO_TOKEN'
+      });
     }
 
-    const isBlacklisted = await userModel.findOne({ token: token });
-
+    // Check blacklist
+    const isBlacklisted = await BlacklistTokenModel.findOne({ token });
     if (isBlacklisted) {
-        return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(401).json({ 
+        message: 'Token has been revoked',
+        code: 'TOKEN_REVOKED'
+      });
     }
 
-    try{
-        
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await userModel.findById(decoded._id);
-        
-        req.user = user;
-
-        return next();
-
-    } catch (err) {
-        return res.status(401).json({ message: 'Unauthorized' });
+    const decoded = verifyAccessToken(token);
+    const user = await UserModel.findById(decoded._id).select('-password');
+    
+    if (!user) {
+      return res.status(401).json({ 
+        message: 'User not found',
+        code: 'USER_NOT_FOUND'
+      });
     }
-}
+
+    req.user = user;
+    req.token = token;
+    next();
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        message: 'Token expired',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        message: 'Invalid token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+    next(error);
+  }
+};

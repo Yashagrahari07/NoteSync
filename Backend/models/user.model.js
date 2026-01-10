@@ -20,21 +20,24 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false,
     },
+  },
+  {
+    timestamps: true, // Adds createdAt and updatedAt automatically
   }
 );
 
-userSchema.methods.generateAuthToken = function (){
-    const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
-    return token;
-} 
+userSchema.methods.generateAuthToken = function () {
+  const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET, { expiresIn: '24h' });
+  return token;
+}
 
-userSchema.methods.comparePassword = async function (password){
-    return await bcrypt.compare(password, this.password);
-} 
+userSchema.methods.comparePassword = async function (password) {
+  return await bcrypt.compare(password, this.password);
+}
 
-userSchema.statics.hashPassword = async function (password){
-    return await bcrypt.hash(password, 10);
-} 
+userSchema.statics.hashPassword = async function (password) {
+  return await bcrypt.hash(password, 10);
+}
 
 userSchema.index({ fullname: 1 }); // For search
 
